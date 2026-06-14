@@ -3,6 +3,7 @@ package com.myhomelibcorp.ui.controller;
 import com.myhomelibcorp.domain.model.Book;
 import com.myhomelibcorp.domain.model.BookEdit;
 import com.myhomelibcorp.domain.service.LibraryService;
+import com.myhomelibcorp.domain.model.SearchCriteria;
 import com.myhomelibcorp.infrastructure.database.DatabaseManager;
 import com.myhomelibcorp.ui.viewmodel.LibraryViewModel;
 import javafx.application.Platform;
@@ -229,6 +230,51 @@ public class MainController {
         }
     }
 
+    @FXML private void handleAdvancedSearch() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/myhomelibcorp/ui/view/AdvancedSearchView.fxml"));
+            Parent root = loader.load();
+            Stage stage = new Stage();
+            stage.setTitle("Розширений пошук");
+            stage.setScene(new Scene(root, 550, 500));
+            stage.showAndWait();
+
+            AdvancedSearchController controller = loader.getController();
+            if (controller.isSearchTriggered()) {
+                AdvancedSearchController.SearchParams params = controller.getSearchParams();
+                performAdvancedSearch(params);
+            }
+        } catch (Exception e) {
+            logger.error("Помилка відкриття розширеного пошуку", e);
+            statusLeftLabel.setText("Помилка відкриття розширеного пошуку: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Виконує розширений пошук на основі параметрів з форми.
+     */
+    private void performAdvancedSearch(AdvancedSearchController.SearchParams params) {
+        // Створюємо критерії пошуку
+        SearchCriteria criteria = new SearchCriteria(
+                params.title(),
+                params.author(),
+                params.genre(),
+                params.series(),
+                params.lang(),
+                params.minRate(), null, null, null, null, null,
+                "", "", "", "", ""
+        );
+
+        // Викликаємо пошук через LibraryService (або через SearchService)
+        List<Book> results = libraryService.searchBooks(criteria.title()); // тимчасово, бо LibraryService поки не підтримує всі критерії
+        // Покращена версія: якщо у LibraryService є метод findBooks(SearchCriteria), використовуйте його:
+        // List<Book> results = libraryService.findBooks(criteria);
+
+        viewModel.getBooksList().setAll(results);
+        updateStatus();
+        statusLeftLabel.setText("Знайдено книг: " + results.size());
+    }
+
     @FXML private void handleOpenBookExternal() {
         Book book = getSelectedBook();
         if (book == null) return;
@@ -430,5 +476,15 @@ public class MainController {
         if (size < 1024) return size + " B";
         if (size < 1024 * 1024) return String.format("%.1f KB", size / 1024.0);
         return String.format("%.1f MB", size / (1024.0 * 1024.0));
+    }
+
+    @FXML private void handleSavedSearches() {
+        // TODO: реалізувати діалог зі збереженими пошуками
+        // Поки що просто показуємо повідомлення
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Збережені пошуки");
+        alert.setHeaderText(null);
+        alert.setContentText("Функцію буде реалізовано в наступних версіях.");
+        alert.showAndWait();
     }
 }

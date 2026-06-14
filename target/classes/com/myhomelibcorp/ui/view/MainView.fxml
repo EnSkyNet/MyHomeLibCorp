@@ -34,6 +34,10 @@
                     <MenuItem text="Встановити оцінку..." onAction="#handleSetRate" />
                     <MenuItem text="Встановити прогрес..." onAction="#handleSetProgress" />
                 </Menu>
+                <Menu text="Пошук">
+                    <MenuItem text="Розширений пошук..." onAction="#handleAdvancedSearch" />
+                    <MenuItem text="Збережені пошуки..." onAction="#handleSavedSearches" />
+                </Menu>
                 <Menu text="Перегляд">
                     <MenuItem text="Оновити" onAction="#handleRefresh" />
                     <MenuItem text="Статистика" onAction="#handleShowStatistics" />

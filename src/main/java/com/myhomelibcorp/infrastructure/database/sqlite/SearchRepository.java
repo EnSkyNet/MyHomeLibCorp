@@ -1,19 +1,23 @@
 package com.myhomelibcorp.infrastructure.database.sqlite;
 
 import com.myhomelibcorp.domain.model.Book;
+import com.myhomelibcorp.domain.model.Author;
 import com.myhomelibcorp.domain.model.SearchCriteria;
 import com.myhomelibcorp.infrastructure.database.DatabaseManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Репозиторій для пошуку книг з різними критеріями.
- * (Поки що використовує простий LIKE-пошук, у майбутньому буде замінено на FTS5 або Lucene.)
+ * Репозиторій для пошуку книг з використанням FTS5.
+ * Забезпечує регістронезалежний пошук завдяки токенізатору unicode61 та зберіганню тексту в нижньому регістрі.
  */
 public class SearchRepository {
 
@@ -28,80 +32,94 @@ public class SearchRepository {
         this.genreRepo = new SqliteGenreRepository(databaseManager);
     }
 
-    /**
-     * Виконує пошук книг за заданими критеріями.
-     */
     public List<Book> searchBooks(SearchCriteria criteria) {
         List<Book> result = new ArrayList<>();
         if (criteria == null) return result;
 
         String queryText = "";
-        if (criteria.title() != null && !criteria.title().isBlank()) {
-            queryText = criteria.title();
-        } else if (criteria.author() != null && !criteria.author().isBlank()) {
-            queryText = criteria.author();
-        } else if (criteria.series() != null && !criteria.series().isBlank()) {
-            queryText = criteria.series();
-        }
+        if (criteria.title() != null && !criteria.title().isBlank()) queryText = criteria.title();
+        else if (criteria.author() != null && !criteria.author().isBlank()) queryText = criteria.author();
+        else if (criteria.series() != null && !criteria.series().isBlank()) queryText = criteria.series();
+        else if (criteria.keywords() != null && !criteria.keywords().isBlank()) queryText = criteria.keywords();
 
-        if (queryText.isBlank()) {
-            // Якщо немає жодного критерію, повертаємо перші 1000 книг (ліміт для продуктивності)
+        if (queryText == null || queryText.isBlank()) {
             String sql = "SELECT * FROM books ORDER BY title COLLATE NOCASE LIMIT 1000;";
             try (Connection conn = databaseManager.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql);
                  ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    result.add(mapResultSetToBook(rs));
-                }
+                while (rs.next()) result.add(mapResultSetToBook(rs));
             } catch (SQLException e) {
-                logger.error("Помилка виконання пошуку без критеріїв", e);
+                logger.error("Помилка отримання всіх книг", e);
                 throw new RuntimeException(e);
             }
             return result;
         }
-        return search(queryText);
+
+        // Використовуємо FTS5 з регістронезалежним пошуком
+        String sql = """
+            SELECT b.* FROM books b
+            JOIN books_fts fts ON b.id = fts.rowid
+            WHERE books_fts MATCH ?
+            ORDER BY rank
+            LIMIT 1000;
+        """;
+        String ftsQuery = buildFtsQuery(queryText);
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, ftsQuery);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) result.add(mapResultSetToBook(rs));
+            }
+        } catch (SQLException e) {
+            logger.error("Помилка FTS5 пошуку", e);
+            return searchLike(queryText);
+        }
+        return result;
     }
 
     /**
-     * Простий пошук за текстом у полях title, series, keywords.
+     * Будує FTS5 запит: переводить у нижній регістр, додає * до кожного слова.
      */
-    public List<Book> search(String query) {
+    private String buildFtsQuery(String query) {
+        String lowerQuery = query.toLowerCase();
+        String[] words = lowerQuery.trim().split("\\s+");
+        StringBuilder sb = new StringBuilder();
+        for (String w : words) {
+            if (sb.length() > 0) sb.append(" ");
+            sb.append(w).append("*");
+        }
+        return sb.toString();
+    }
+
+    private List<Book> searchLike(String query) {
         List<Book> result = new ArrayList<>();
         String sql = """
             SELECT * FROM books 
             WHERE title LIKE ? OR series LIKE ? OR keywords LIKE ? 
             ORDER BY title COLLATE NOCASE;
         """;
-        String searchPattern = "%" + query.trim() + "%";
+        String pattern = "%" + query.trim() + "%";
         try (Connection conn = databaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, searchPattern);
-            pstmt.setString(2, searchPattern);
-            pstmt.setString(3, searchPattern);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    result.add(mapResultSetToBook(rs));
-                }
-            }
+            pstmt.setString(1, pattern);
+            pstmt.setString(2, pattern);
+            pstmt.setString(3, pattern);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) result.add(mapResultSetToBook(rs));
         } catch (SQLException e) {
-            logger.error("Помилка пошуку за запитом: {}", query, e);
+            logger.error("Помилка LIKE пошуку", e);
             throw new RuntimeException(e);
         }
         return result;
     }
 
-    /**
-     * Повертає список унікальних мов книг.
-     */
     public List<String> getDistinctLanguages() {
         List<String> languages = new ArrayList<>();
         String sql = "SELECT DISTINCT language FROM books WHERE language IS NOT NULL AND language != '' ORDER BY language COLLATE NOCASE;";
         try (Connection conn = databaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
-            while (rs.next()) {
-                languages.add(rs.getString("language"));
-            }
+            while (rs.next()) languages.add(rs.getString("language"));
         } catch (SQLException e) {
             logger.error("Помилка отримання списку мов", e);
             throw new RuntimeException(e);
@@ -109,9 +127,10 @@ public class SearchRepository {
         return languages;
     }
 
-    /**
-     * Пошук книг за ID автора.
-     */
+    public List<Book> search(String query) {
+        return searchBooks(new SearchCriteria(query, "", "", ""));
+    }
+
     public List<Book> findBooksByAuthorId(long authorId) {
         List<Book> result = new ArrayList<>();
         String sql = """
@@ -123,13 +142,10 @@ public class SearchRepository {
         try (Connection conn = databaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setLong(1, authorId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    result.add(mapResultSetToBook(rs));
-                }
-            }
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) result.add(mapResultSetToBook(rs));
         } catch (SQLException e) {
-            logger.error("Помилка пошуку книг за автором {}", authorId, e);
+            logger.error("Помилка пошуку книг за автором", e);
             throw new RuntimeException(e);
         }
         return result;
@@ -137,12 +153,11 @@ public class SearchRepository {
 
     private Book mapResultSetToBook(ResultSet rs) throws SQLException {
         long bookId = rs.getLong("id");
-        List<com.myhomelibcorp.domain.model.Author> authorsList = bookRepo.findAuthorsForBook(bookId);
+        List<Author> authorsList = bookRepo.findAuthorsForBook(bookId);
         List<String> genreCodes = bookRepo.findGenreCodesForBook(bookId);
         List<String> genreNames = new ArrayList<>();
         for (String code : genreCodes) {
-            String name = genreRepo.getGenreName(code);
-            genreNames.add(name);
+            genreNames.add(genreRepo.getGenreName(code));
         }
         String dtStr = rs.getString("date_time");
         LocalDateTime bookDate = (dtStr == null || dtStr.isBlank()) ? LocalDateTime.now() : LocalDateTime.parse(dtStr);

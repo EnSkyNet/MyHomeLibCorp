@@ -356,4 +356,86 @@ public class SqliteBookRepository {
                 bookDate
         );
     }
+    public int getBookCount() {
+        String sql = "SELECT COUNT(*) FROM books;";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            if (rs.next()) return rs.getInt(1);
+        } catch (SQLException e) {
+            logger.error("Помилка отримання кількості книг", e);
+        }
+        return 0;
+    }
+    /**
+     * Зберігає жанр, якщо його ще немає в таблиці genres.
+     */
+    public void saveGenreIfNotExists(String code, String name) {
+        String sql = "INSERT OR IGNORE INTO genres (code, name) VALUES (?, ?)";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, code);
+            ps.setString(2, name);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            logger.error("Помилка збереження жанру {} -> {}", code, name, e);
+        }
+    }
+
+    /**
+     * Примусово оновлює FTS-індекс для конкретної книги.
+     * Використовується після додавання/зміни авторів або жанрів.
+     */
+    public void refreshFtsForBook(long bookId) {
+        String authorsSql = """
+            SELECT lower(group_concat(full_name, ' ')) as authors
+            FROM authors
+            JOIN book_authors ON authors.id = book_authors.author_id
+            WHERE book_authors.book_id = ?
+        """;
+        String bookSql = "SELECT title, series, keywords, annotation FROM books WHERE id = ?";
+
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement bookStmt = conn.prepareStatement(bookSql);
+             PreparedStatement authorsStmt = conn.prepareStatement(authorsSql)) {
+
+            // Отримуємо дані книги
+            bookStmt.setLong(1, bookId);
+            ResultSet bookRs = bookStmt.executeQuery();
+            if (!bookRs.next()) return;
+
+            String title = bookRs.getString("title");
+            String series = bookRs.getString("series");
+            String keywords = bookRs.getString("keywords");
+            String annotation = bookRs.getString("annotation");
+
+            // Отримуємо об'єднаних авторів
+            authorsStmt.setLong(1, bookId);
+            ResultSet authorsRs = authorsStmt.executeQuery();
+            String authors = authorsRs.next() ? authorsRs.getString("authors") : "";
+
+            // Оновлюємо FTS
+            String updateFtsSql = """
+                UPDATE books_fts SET
+                    title = lower(?),
+                    authors = ?,
+                    series = lower(?),
+                    keywords = lower(?),
+                    annotation = lower(?)
+                WHERE rowid = ?
+            """;
+            try (PreparedStatement updateStmt = conn.prepareStatement(updateFtsSql)) {
+                updateStmt.setString(1, title);
+                updateStmt.setString(2, authors);
+                updateStmt.setString(3, series);
+                updateStmt.setString(4, keywords);
+                updateStmt.setString(5, annotation);
+                updateStmt.setLong(6, bookId);
+                updateStmt.executeUpdate();
+                logger.debug("Оновлено FTS для книги id={}", bookId);
+            }
+        } catch (SQLException e) {
+            logger.error("Помилка оновлення FTS для книги id={}", bookId, e);
+        }
+    }
 }

@@ -4,7 +4,22 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b392b232-d61b-4b88-bdfb-daa21a7158dd" name="Changes" comment="Підсумок кроку 0&#10;✅ Що зроблено:&#10;&#10;Створено структуру пакетів відповідно до цільової архітектури.&#10;&#10;Імпортовано всі Java-класи зі старого проекту з перейменуванням пакетів.&#10;&#10;Виправлено BOM-проблему (файли збережено в UTF-8 без BOM).&#10;&#10;Оновлено всі імпорти та назви класів (наприклад, BookRepository → SqliteBookRepository).&#10;&#10;Додано українські коментарі.&#10;&#10;Усунуто конфлікти між AWT та JavaFX (використано повні імена або окремі імпорти).&#10;&#10;Проєкт успішно компілюється." />
+    <list default="true" id="b392b232-d61b-4b88-bdfb-daa21a7158dd" name="Changes" comment="Підсумок кроку 0&#10;✅ Що зроблено:&#10;&#10;Створено структуру пакетів відповідно до цільової архітектури.&#10;&#10;Імпортовано всі Java-класи зі старого проекту з перейменуванням пакетів.&#10;&#10;Виправлено BOM-проблему (файли збережено в UTF-8 без BOM).&#10;&#10;Оновлено всі імпорти та назви класів (наприклад, BookRepository → SqliteBookRepository).&#10;&#10;Додано українські коментарі.&#10;&#10;Усунуто конфлікти між AWT та JavaFX (використано повні імена або окремі імпорти).&#10;&#10;Проєкт успішно компілюється.">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/infrastructure/database/DatabaseManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/infrastructure/database/DatabaseManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/infrastructure/database/sqlite/SearchRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/infrastructure/database/sqlite/SearchRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/infrastructure/database/sqlite/SqliteBookRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/infrastructure/database/sqlite/SqliteBookRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/infrastructure/database/sqlite/SqliteGenreRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/infrastructure/database/sqlite/SqliteGenreRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/ui/controller/MainController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/ui/controller/MainController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/com/myhomelibcorp/ui/view/MainView.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/com/myhomelibcorp/ui/view/MainView.fxml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/infrastructure/database/DatabaseManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/infrastructure/database/DatabaseManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/infrastructure/database/sqlite/SearchRepository.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/infrastructure/database/sqlite/SearchRepository.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/infrastructure/database/sqlite/SqliteBookRepository.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/infrastructure/database/sqlite/SqliteBookRepository.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/ui/controller/MainController$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/ui/controller/MainController$1.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/ui/controller/MainController$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/ui/controller/MainController$2.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/ui/controller/MainController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/ui/controller/MainController.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/ui/view/MainView.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/ui/view/MainView.fxml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -78,7 +93,7 @@
       <option name="presentableId" value="Default" />
       <updated>1781443516342</updated>
       <workItem from="1781443517488" duration="4699000" />
-      <workItem from="1781449432237" duration="7163000" />
+      <workItem from="1781449432237" duration="11407000" />
     </task>
     <task id="LOCAL-00001" summary="Підсумок кроку 0&#10;✅ Що зроблено:&#10;&#10;Створено структуру пакетів відповідно до цільової архітектури.&#10;&#10;Імпортовано всі Java-класи зі старого проекту з перейменуванням пакетів.&#10;&#10;Виправлено BOM-проблему (файли збережено в UTF-8 без BOM).&#10;&#10;Оновлено всі імпорти та назви класів (наприклад, BookRepository → SqliteBookRepository).&#10;&#10;Додано українські коментарі.&#10;&#10;Усунуто конфлікти між AWT та JavaFX (використано повні імена або окремі імпорти).&#10;&#10;Проєкт успішно компілюється.">
       <option name="closed" value="true" />
@@ -88,7 +103,23 @@
       <option name="project" value="LOCAL" />
       <updated>1781456930694</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Підсумок кроку 0&#10;✅ Що зроблено:&#10;&#10;Створено структуру пакетів відповідно до цільової архітектури.&#10;&#10;Імпортовано всі Java-класи зі старого проекту з перейменуванням пакетів.&#10;&#10;Виправлено BOM-проблему (файли збережено в UTF-8 без BOM).&#10;&#10;Оновлено всі імпорти та назви класів (наприклад, BookRepository → SqliteBookRepository).&#10;&#10;Додано українські коментарі.&#10;&#10;Усунуто конфлікти між AWT та JavaFX (використано повні імена або окремі імпорти).&#10;&#10;Проєкт успішно компілюється.">
+      <option name="closed" value="true" />
+      <created>1781456983300</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1781456983300</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Підсумок кроку 0&#10;✅ Що зроблено:&#10;&#10;Створено структуру пакетів відповідно до цільової архітектури.&#10;&#10;Імпортовано всі Java-класи зі старого проекту з перейменуванням пакетів.&#10;&#10;Виправлено BOM-проблему (файли збережено в UTF-8 без BOM).&#10;&#10;Оновлено всі імпорти та назви класів (наприклад, BookRepository → SqliteBookRepository).&#10;&#10;Додано українські коментарі.&#10;&#10;Усунуто конфлікти між AWT та JavaFX (використано повні імена або окремі імпорти).&#10;&#10;Проєкт успішно компілюється.">
+      <option name="closed" value="true" />
+      <created>1781458267630</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1781458267630</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -105,11 +136,6 @@
           <url>file://$PROJECT_DIR$/src/main/java/org/myhomelib/Main.java</url>
           <line>13</line>
           <option name="timeStamp" value="1" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" type="java-line">
-          <url>file://$PROJECT_DIR$/src/main/java/com/myhomelibcorp/ui/controller/MainController.java</url>
-          <line>421</line>
-          <option name="timeStamp" value="2" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>

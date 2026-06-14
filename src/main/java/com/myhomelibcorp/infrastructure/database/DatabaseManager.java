@@ -15,7 +15,8 @@ import java.util.List;
 
 /**
  * Менеджер підключення до бази даних SQLite.
- * Відповідає за створення таблиць, індексів, початкове заповнення та надання з'єднань.
+ * Використовує FTS5 з токенізатором unicode61 для регістронезалежного пошуку.
+ * Автоматично створює всі таблиці, індекси та тригери.
  */
 public class DatabaseManager {
 
@@ -37,12 +38,15 @@ public class DatabaseManager {
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
 
+            // Оптимізація SQLite
             stmt.execute("PRAGMA journal_mode=WAL;");
             stmt.execute("PRAGMA synchronous=OFF;");
             stmt.execute("PRAGMA cache_size=-64000;");
             stmt.execute("PRAGMA foreign_keys=ON;");
 
-            // Таблиця книг
+            // ==================== ОСНОВНІ ТАБЛИЦІ ====================
+
+            // Книги
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS books (
                     id INTEGER PRIMARY KEY,
@@ -63,7 +67,7 @@ public class DatabaseManager {
                 );
             """);
 
-            // Таблиця авторів
+            // Автори
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS authors (
                     id INTEGER PRIMARY KEY,
@@ -87,7 +91,7 @@ public class DatabaseManager {
                 );
             """);
 
-            // Таблиця жанрів
+            // Жанри
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS genres (
                     code TEXT PRIMARY KEY,
@@ -106,7 +110,7 @@ public class DatabaseManager {
                 );
             """);
 
-            // Таблиця груп
+            // Групи
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS groups (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -125,7 +129,7 @@ public class DatabaseManager {
                 );
             """);
 
-            // Таблиця налаштувань
+            // Налаштування
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS settings (
                     key TEXT PRIMARY KEY,
@@ -133,7 +137,7 @@ public class DatabaseManager {
                 );
             """);
 
-            // Міграції для зворотної сумісності
+            // Міграції для зворотної сумісності зі старою схемою
             try { stmt.execute("ALTER TABLE books ADD COLUMN review TEXT;"); } catch (SQLException ignored) {}
             try { stmt.execute("ALTER TABLE authors ADD COLUMN field3 TEXT;"); } catch (SQLException ignored) {}
             try { stmt.execute("ALTER TABLE authors ADD COLUMN field4 TEXT;"); } catch (SQLException ignored) {}
@@ -149,7 +153,85 @@ public class DatabaseManager {
                 stmt.execute("DROP TABLE genres_old;");
             } catch (SQLException ignored) {}
 
-            // Індекси
+            // ==================== FTS5 ТА ТРИГЕРИ ====================
+
+            // Видаляємо стару FTS-таблицю, щоб створити з правильною конфігурацією
+            try { stmt.execute("DROP TABLE IF EXISTS books_fts;"); } catch (SQLException ignored) {}
+
+            // Віртуальна таблиця для повнотекстового пошуку з підтримкою Unicode
+            stmt.execute("""
+                CREATE VIRTUAL TABLE books_fts USING fts5(
+                    title, authors, series, keywords, annotation,
+                    tokenize='unicode61'
+                );
+            """);
+
+            // Тригер на вставку книги (зберігає всі текстові поля в нижньому регістрі)
+            stmt.execute("""
+                CREATE TRIGGER IF NOT EXISTS books_ai AFTER INSERT ON books BEGIN
+                    INSERT INTO books_fts(rowid, title, authors, series, keywords, annotation)
+                    VALUES (
+                        new.id,
+                        lower(new.title),
+                        lower(coalesce((
+                            SELECT group_concat(full_name, ' ') FROM authors 
+                            JOIN book_authors ON authors.id = book_authors.author_id 
+                            WHERE book_authors.book_id = new.id
+                        ), '')),
+                        lower(new.series),
+                        lower(new.keywords),
+                        lower(new.annotation)
+                    );
+                END;
+            """);
+
+            // Тригер на оновлення книги
+            stmt.execute("""
+                CREATE TRIGGER IF NOT EXISTS books_au AFTER UPDATE ON books BEGIN
+                    UPDATE books_fts SET
+                        title = lower(new.title),
+                        authors = lower(coalesce((
+                            SELECT group_concat(full_name, ' ') FROM authors 
+                            JOIN book_authors ON authors.id = book_authors.author_id 
+                            WHERE book_authors.book_id = new.id
+                        ), '')),
+                        series = lower(new.series),
+                        keywords = lower(new.keywords),
+                        annotation = lower(new.annotation)
+                    WHERE rowid = old.id;
+                END;
+            """);
+
+            // Тригер на видалення книги
+            stmt.execute("""
+                CREATE TRIGGER IF NOT EXISTS books_ad AFTER DELETE ON books BEGIN
+                    DELETE FROM books_fts WHERE rowid = old.id;
+                END;
+            """);
+
+            // Тригер при додаванні зв'язку книга-автор
+            stmt.execute("""
+                CREATE TRIGGER IF NOT EXISTS book_authors_ai AFTER INSERT ON book_authors BEGIN
+                    UPDATE books_fts SET authors = lower(coalesce((
+                        SELECT group_concat(full_name, ' ') FROM authors 
+                        JOIN book_authors ON authors.id = book_authors.author_id 
+                        WHERE book_authors.book_id = new.book_id
+                    ), '')) WHERE rowid = new.book_id;
+                END;
+            """);
+
+            // Тригер при видаленні зв'язку книга-автор
+            stmt.execute("""
+                CREATE TRIGGER IF NOT EXISTS book_authors_ad AFTER DELETE ON book_authors BEGIN
+                    UPDATE books_fts SET authors = lower(coalesce((
+                        SELECT group_concat(full_name, ' ') FROM authors 
+                        JOIN book_authors ON authors.id = book_authors.author_id 
+                        WHERE book_authors.book_id = old.book_id
+                    ), '')) WHERE rowid = old.book_id;
+                END;
+            """);
+
+            // ==================== ІНДЕКСИ ====================
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_books_title ON books(title);");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_books_series ON books(series);");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_books_language ON books(language);");
@@ -162,6 +244,7 @@ public class DatabaseManager {
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_groups_name ON groups(name);");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_book_groups_book_id ON book_groups(book_id);");
 
+            // ==================== ПОЧАТКОВІ ДАНІ ====================
             seedDefaultGroups(stmt);
             seedDefaultSettings(stmt);
 
@@ -205,7 +288,6 @@ public class DatabaseManager {
     }
 
     public void saveBooksBatch(List<Book> books) {
-        // Заглушка – буде реалізовано в наступних етапах
         logger.info("Пакетне збереження {} книг (ще не реалізовано)", books.size());
     }
 

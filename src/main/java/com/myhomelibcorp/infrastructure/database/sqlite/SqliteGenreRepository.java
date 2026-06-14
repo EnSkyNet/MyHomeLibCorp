@@ -53,7 +53,7 @@ public class SqliteGenreRepository {
         } catch (SQLException e) {
             logger.error("Помилка отримання назви жанру для коду {}", code, e);
         }
-        return code; // fallback
+        return code; // fallback: повертаємо сам код, якщо не знайдено
     }
 
     /**
