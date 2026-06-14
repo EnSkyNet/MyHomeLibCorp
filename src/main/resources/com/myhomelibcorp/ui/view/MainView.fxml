@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<!-- Головне вікно програми -->
+<BorderPane prefHeight="700.0" prefWidth="1100.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.myhomelibcorp.ui.controller.MainController">
+    <top>
+        <VBox>
+            <MenuBar>
+                <Menu text="Файл">
+                    <MenuItem text="Відкрити колекцію..." onAction="#handleOpenCollection" />
+                    <MenuItem text="Зареєстровані колекції..." onAction="#handleShowCollections" />
+                    <MenuItem text="Імпортувати папку FB2/FBD/ZIP..." onAction="#handleImportFolder" />
+                    <MenuItem text="Імпортувати INPX..." onAction="#handleImportInpx" />
+                    <MenuItem text="Імпортувати список жанрів..." onAction="#handleImportGenres" />
+                    <SeparatorMenuItem />
+                    <MenuItem text="Експортувати вибрану книгу..." onAction="#handleExportBook" />
+                    <MenuItem text="Відкрити вибрану книгу" onAction="#handleOpenBookExternal" />
+                    <SeparatorMenuItem />
+                    <MenuItem text="Вихід" onAction="#handleExit" />
+                </Menu>
+                <Menu text="Книга">
+                    <MenuItem text="Читати всередині" onAction="#handleReadBook" />
+                    <MenuItem text="Відкрити" onAction="#handleOpenBookExternal" />
+                    <MenuItem text="Експортувати..." onAction="#handleExportBook" />
+                    <MenuItem text="Редагувати..." onAction="#handleEditBook" />
+                    <MenuItem text="Редагувати рецензію..." onAction="#handleEditReview" />
+                    <MenuItem text="Додати до Обраного" onAction="#handleAddToFavorites" />
+                    <MenuItem text="Додати до групи..." onAction="#handleAddToGroup" />
+                    <MenuItem text="Видалити з групи..." onAction="#handleRemoveFromGroup" />
+                    <SeparatorMenuItem />
+                    <MenuItem text="Встановити оцінку..." onAction="#handleSetRate" />
+                    <MenuItem text="Встановити прогрес..." onAction="#handleSetProgress" />
+                </Menu>
+                <Menu text="Перегляд">
+                    <MenuItem text="Оновити" onAction="#handleRefresh" />
+                    <MenuItem text="Статистика" onAction="#handleShowStatistics" />
+                    <MenuItem text="Налаштування" onAction="#handleShowSettings" />
+                </Menu>
+                <Menu text="Довідка">
+                    <MenuItem text="Про програму" onAction="#handleAbout" />
+                </Menu>
+            </MenuBar>
+            <ToolBar prefHeight="40.0">
+                <items>
+                    <Button text="Відкрити" onAction="#handleOpenCollection" />
+                    <Button text="Імпорт FB2" onAction="#handleImportFolder" />
+                    <Button text="Імпорт INPX" onAction="#handleImportInpx" />
+                    <Button text="Оновити" onAction="#handleRefresh" />
+                    <Button text="Читати" onAction="#handleReadBook" />
+                    <Button text="Відкрити книгу" onAction="#handleOpenBookExternal" />
+                    <Button text="Редагувати" onAction="#handleEditBook" />
+                    <Button text="Обране" onAction="#handleAddToFavorites" />
+                    <Separator orientation="VERTICAL" />
+                    <Label text="Пошук:" />
+                    <TextField fx:id="searchField" promptText="Пошук..." prefWidth="200.0" />
+                </items>
+            </ToolBar>
+        </VBox>
+    </top>
+    <center>
+        <SplitPane dividerPositions="0.25" prefHeight="160.0" prefWidth="200.0">
+            <items>
+                <TabPane side="TOP" tabClosingPolicy="UNAVAILABLE">
+                    <tabs>
+                        <Tab text="Усі книги">
+                            <content>
+                                <Label text="Усі імпортовані книги показані в таблиці." />
+                            </content>
+                        </Tab>
+                        <Tab text="Автори">
+                            <content>
+                                <ListView fx:id="authorsList" />
+                            </content>
+                        </Tab>
+                        <Tab text="Серії">
+                            <content>
+                                <ListView fx:id="seriesList" />
+                            </content>
+                        </Tab>
+                        <Tab text="Жанри">
+                            <content>
+                                <ListView fx:id="genresList" />
+                            </content>
+                        </Tab>
+                        <Tab text="Групи">
+                            <content>
+                                <ListView fx:id="groupsList" />
+                            </content>
+                        </Tab>
+                        <Tab text="Завантаження">
+                            <content>
+                                <Label text="Список завантажень зарезервовано для майбутнього порту LibRusEc/Flibusta." />
+                            </content>
+                        </Tab>
+                    </tabs>
+                </TabPane>
+                <SplitPane orientation="VERTICAL" dividerPositions="0.68">
+                    <items>
+                        <TableView fx:id="bookTable">
+                            <columns>
+                                <TableColumn fx:id="titleCol" text="Назва" prefWidth="220" />
+                                <TableColumn fx:id="authorCol" text="Автор" prefWidth="180" />
+                                <TableColumn fx:id="seriesCol" text="Серія" prefWidth="120" />
+                                <TableColumn fx:id="seqNumberCol" text="№" prefWidth="50" />
+                                <TableColumn fx:id="genreCol" text="Жанр" prefWidth="150" />
+                                <TableColumn fx:id="langCol" text="Мова" prefWidth="50" />
+                                <TableColumn fx:id="rateCol" text="Оцінка" prefWidth="50" />
+                                <TableColumn fx:id="progressCol" text="Прогрес" prefWidth="70" />
+                                <TableColumn fx:id="fileNameCol" text="Файл" prefWidth="150" />
+                                <TableColumn fx:id="sizeCol" text="Розмір" prefWidth="80" />
+                            </columns>
+                            <columnResizePolicy>
+                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                            </columnResizePolicy>
+                        </TableView>
+                        <VBox spacing="8.0" style="-fx-background-color: #f9f9f9;">
+                            <padding>
+                                <Insets bottom="10.0" left="12.0" right="12.0" top="10.0" />
+                            </padding>
+                            <children>
+                                <Label fx:id="detailTitleLabel" style="-fx-font-weight: bold; -fx-font-size: 14px;" text="Назва: -" wrapText="true" />
+                                <Label fx:id="detailAuthorLabel" text="Автор: -" wrapText="true" />
+                                <Label fx:id="detailSeriesLabel" text="Серія: -" wrapText="true" />
+                                <Label fx:id="detailGenresLabel" text="Жанри: -" wrapText="true" />
+                                <Label fx:id="detailLanguageLabel" text="Мова: -" />
+                                <Label fx:id="detailFileLabel" text="Файл: -" />
+                                <Label fx:id="detailSizeLabel" text="Розмір: -" />
+                                <Label fx:id="detailRateLabel" text="Оцінка: -" />
+                                <Label fx:id="detailProgressLabel" text="Прогрес: -%" />
+                                <TextArea fx:id="detailKeywordsArea" promptText="Ключові слова" prefHeight="60" wrapText="true" />
+                                <TextArea fx:id="detailAnnotationArea" promptText="Анотація" prefHeight="120" wrapText="true" />
+                                <TextArea fx:id="detailReviewArea" promptText="Рецензія" prefHeight="80" wrapText="true" />
+                            </children>
+                        </VBox>
+                    </items>
+                </SplitPane>
+            </items>
+        </SplitPane>
+    </center>
+    <bottom>
+        <HBox spacing="10.0" style="-fx-background-color: #f0f0f0; -fx-border-color: #cccccc; -fx-border-width: 1 0 0 0;">
+            <padding>
+                <Insets bottom="4.0" left="10.0" right="10.0" top="4.0" />
+            </padding>
+            <children>
+                <Label fx:id="statusLeftLabel" text="Готово" />
+                <Pane HBox.hgrow="ALWAYS" />
+                <Label fx:id="statusRightLabel" text="Всього книг: 0" />
+            </children>
+        </HBox>
+    </bottom>
+</BorderPane>

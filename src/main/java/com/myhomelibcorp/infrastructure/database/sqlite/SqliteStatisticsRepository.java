@@ -1,0 +1,77 @@
+package com.myhomelibcorp.infrastructure.database.sqlite;
+
+import com.myhomelibcorp.infrastructure.database.DatabaseManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+/**
+ * Репозиторій для збору статистики (кількість книг, авторів, загальний розмір).
+ */
+public class SqliteStatisticsRepository {
+
+    private static final Logger logger = LoggerFactory.getLogger(SqliteStatisticsRepository.class);
+    private final DatabaseManager databaseManager;
+
+    public SqliteStatisticsRepository(DatabaseManager databaseManager) {
+        this.databaseManager = databaseManager;
+    }
+
+    /**
+     * Отримати загальну кількість книг у базі даних.
+     */
+    public long getTotalBooksCount() {
+        String sql = "SELECT COUNT(*) FROM books;";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            if (rs.next()) {
+                return rs.getLong(1);
+            }
+        } catch (SQLException e) {
+            logger.error("Помилка getTotalBooksCount", e);
+            throw new RuntimeException(e);
+        }
+        return 0;
+    }
+
+    /**
+     * Отримати загальну кількість унікальних авторів.
+     */
+    public long getTotalAuthorsCount() {
+        String sql = "SELECT COUNT(*) FROM authors;";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            if (rs.next()) {
+                return rs.getLong(1);
+            }
+        } catch (SQLException e) {
+            logger.error("Помилка getTotalAuthorsCount", e);
+            throw new RuntimeException(e);
+        }
+        return 0;
+    }
+
+    /**
+     * Отримати сумарний розмір усіх файлів книг у байтах.
+     */
+    public long getTotalLibrarySizeInBytes() {
+        String sql = "SELECT TOTAL(file_size) FROM books;";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            if (rs.next()) {
+                return rs.getLong(1);
+            }
+        } catch (SQLException e) {
+            logger.error("Помилка getTotalLibrarySizeInBytes", e);
+            throw new RuntimeException(e);
+        }
+        return 0;
+    }
+}
