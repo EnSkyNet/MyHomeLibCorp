@@ -73,27 +73,47 @@ public class MainApp extends Application {
         String lastDbPath = settingsStore.getString("lastOpenedCollection", "library.db");
         DatabaseManager dbManager = new DatabaseManager(lastDbPath);
         SqliteGenreRepository genreRepository = new SqliteGenreRepository(dbManager);
-        if (genreRepository.getAllGenreNames().isEmpty()) {
-            URL genreFileUrl = getClass().getClassLoader().getResource("genres_fb2.txt");
-            if (genreFileUrl != null) {
-                new GenreListImporter(dbManager, genreRepository).importGenresFromFile(Path.of(genreFileUrl.toURI()));
+
+        // РџСЂРёРјСѓСЃРѕРІРёР№ С–РјРїРѕСЂС‚ Р¶Р°РЅСЂС–РІ (СЏРєС‰Рѕ С„Р°Р№Р» С–СЃРЅСѓС”, Р·Р°РІР¶РґРё С–РјРїРѕСЂС‚СѓС”РјРѕ)
+        URL genreFileUrl = getClass().getClassLoader().getResource("genres_fb2.txt");
+        if (genreFileUrl != null) {
+            try {
+                Path genreFilePath = Path.of(genreFileUrl.toURI());
+                GenreListImporter genreImporter = new GenreListImporter(dbManager, genreRepository);
+                genreImporter.importGenresFromFile(genreFilePath);
+                logger.info("Р–Р°РЅСЂРё С–РјРїРѕСЂС‚РѕРІР°РЅРѕ");
+            } catch (Exception e) {
+                logger.error("РџРѕРјРёР»РєР° С–РјРїРѕСЂС‚Сѓ Р¶Р°РЅСЂС–РІ", e);
             }
+        } else {
+            logger.warn("Р¤Р°Р№Р» genres_fb2.txt РЅРµ Р·РЅР°Р№РґРµРЅРѕ");
         }
+
         LibraryService libraryService = new LibraryService(dbManager, settingsStore);
         SqliteBookRepository bookRepository = new SqliteBookRepository(dbManager);
         Fb2Importer fb2Importer = new Fb2Importer();
         LibraryViewModel viewModel = new LibraryViewModel(bookRepository, fb2Importer);
+
+        // Р”РѕРґР°С”РјРѕ С‚РµСЃС‚РѕРІСѓ РєРЅРёРіСѓ, СЏРєС‰Рѕ Р±Р°Р·Р° РїРѕСЂРѕР¶РЅСЏ
         if (bookRepository.getBookCount() == 0) {
             Author testAuthor = new Author(1L, "РўРµСЃС‚РѕРІРёР№", "", "РђРІС‚РѕСЂ");
             List<Author> authors = List.of(testAuthor);
-            List<String> genres = List.of("sf", "sf_fantasy");
-            Book testBook = new Book(1L, "РўРµСЃС‚РѕРІР° РєРЅРёРіР°", authors, genres, "РўРµСЃС‚РѕРІР° СЃРµСЂС–СЏ", 1, "uk", "test.fb2", "", "", 1024, "", "РўРµСЃС‚РѕРІР° РєРЅРёРіР°", 0, 0, LocalDateTime.now());
+            // Р’РёРєРѕСЂРёСЃС‚РѕРІСѓС”РјРѕ РєРѕРґРё, СЏРєС– С‚РѕС‡РЅРѕ С” РІ С„Р°Р№Р»С– Р¶Р°РЅСЂС–РІ
+            List<String> genreCodes = List.of("sf", "sf_fantasy");
+            Book testBook = new Book(1L, "РўРµСЃС‚РѕРІР° РєРЅРёРіР°", authors, genreCodes, "РўРµСЃС‚РѕРІР° СЃРµСЂС–СЏ", 1, "uk", "test.fb2", "", "", 1024, "", "РўРµСЃС‚РѕРІР° РєРЅРёРіР°", 0, 0, LocalDateTime.now());
             bookRepository.save(testBook);
             bookRepository.saveAuthorsForBook(testBook.id(), authors);
-            bookRepository.saveGenresForBook(testBook.id(), genres);
+            bookRepository.saveGenresForBook(testBook.id(), genreCodes);
             bookRepository.refreshFtsForBook(testBook.id());
+            logger.info("Р”РѕРґР°РЅРѕ С‚РµСЃС‚РѕРІСѓ РєРЅРёРіСѓ");
         }
+
+        // Р—Р°РІР°РЅС‚Р°Р¶СѓС”РјРѕ РєРЅРёРіРё
         viewModel.loadAllBooks();
+
+        // РћРЅРѕРІР»СЋС”РјРѕ FTS-С–РЅРґРµРєСЃ РґР»СЏ РІСЃС–С… РєРЅРёРі (РЅР° РІРёРїР°РґРѕРє, СЏРєС‰Рѕ Р¶Р°РЅСЂРё Р·РјС–РЅРёР»РёСЃСЏ)
+        bookRepository.refreshAllFts();
+
         FXMLLoader loader = new FXMLLoader(fxmlLocation);
         Parent root = loader.load();
         MainController controller = loader.getController();
@@ -102,6 +122,7 @@ public class MainApp extends Application {
         primaryStage.setScene(new Scene(root, 1150, 720));
         primaryStage.show();
     }
+
     public static void main(String[] args) { launch(args); }
 }
 
@@ -2174,12 +2195,24 @@ public class SearchRepository {
             ResultSet rs = ps.executeQuery();
             while (rs.next()) bookRepo.findById(rs.getLong("id")).ifPresent(result::add);
         } catch (SQLException e) { logger.error("FTS РїРѕС€СѓРє РЅРµ РІРґР°РІСЃСЏ", e); return fallbackSearch(query); }
+        logger.debug("FTS Р·Р°РїРёС‚: {}", ftsQuery);
         return result;
     }
-    private String buildFtsQuery(String q) {
-        String[] words = q.toLowerCase().split("\\s+");
+    private String buildFtsQuery(String query) {
+        // РџРµСЂРµРІРѕРґРёРјРѕ РІРµСЃСЊ Р·Р°РїРёС‚ Сѓ РЅРёР¶РЅС–Р№ СЂРµРіС–СЃС‚СЂ С– РІРёРґР°Р»СЏС”РјРѕ Р·Р°Р№РІС– РїСЂРѕР±С–Р»Рё
+        String lowerQuery = query.toLowerCase().trim();
+        // Р РѕР·Р±РёРІР°С”РјРѕ РЅР° СЃР»РѕРІР°
+        String[] words = lowerQuery.split("\\s+");
         StringBuilder sb = new StringBuilder();
-        for (String w : words) { if (sb.length() > 0) sb.append(" "); sb.append(w).append("*"); }
+        for (String w : words) {
+            if (sb.length() > 0) sb.append(" ");
+            // Р”РѕРґР°С”РјРѕ * РґР»СЏ РїРѕС€СѓРєСѓ Р·Р° РїСЂРµС„С–РєСЃРѕРј (СЏРєС‰Рѕ СЃР»РѕРІРѕ РЅРµ РґСѓР¶Рµ РєРѕСЂРѕС‚РєРµ)
+            if (w.length() >= 2) {
+                sb.append(w).append("*");
+            } else {
+                sb.append(w);
+            }
+        }
         return sb.toString();
     }
     private List<Book> fallbackSearch(String q) {
@@ -2522,20 +2555,24 @@ public class SqliteGenreRepository {
      * РџРѕРІРµСЂС‚Р°С” РЅР°Р·РІСѓ Р¶Р°РЅСЂСѓ Р·Р° РєРѕРґРѕРј. РЇРєС‰Рѕ РєРѕРґ РЅРµ Р·РЅР°Р№РґРµРЅРѕ, РїРѕРІРµСЂС‚Р°С” СЃР°Рј РєРѕРґ.
      */
     public String getGenreName(String code) {
-        String sql = "SELECT name FROM genres WHERE code = ?";
+        if (code == null || code.isBlank()) return "";
+        String sql = "SELECT name FROM genres WHERE code = ? OR name = ?";
         try (Connection conn = dbManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, code);
+            ps.setString(2, code); // СЏРєС‰Рѕ РєРѕРґ РЅР°СЃРїСЂР°РІРґС– РЅР°Р·РІР°
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
-                return rs.getString("name");
+                String name = rs.getString("name");
+                logger.debug("Р—РЅР°Р№РґРµРЅРѕ Р¶Р°РЅСЂ: РєРѕРґ={} -> РЅР°Р·РІР°={}", code, name);
+                return name;
             } else {
                 logger.warn("РљРѕРґ Р¶Р°РЅСЂСѓ РЅРµ Р·РЅР°Р№РґРµРЅРѕ: {}", code);
             }
         } catch (SQLException e) {
             logger.error("РџРѕРјРёР»РєР° РѕС‚СЂРёРјР°РЅРЅСЏ РЅР°Р·РІРё Р¶Р°РЅСЂСѓ РґР»СЏ РєРѕРґСѓ {}", code, e);
         }
-        return code; // fallback
+        return code;
     }
 
     /**
@@ -5157,128 +5194,175 @@ public class LibraryViewModel {
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<AnchorPane prefHeight="700.0" prefWidth="1100.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.myhomelibcorp.ui.controller.MainController">
-    <children>
-        <VBox layoutY="0.0" spacing="0.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
-            <children>
-                <!-- РњРµРЅСЋ -->
-                <MenuBar>
-                    <Menu text="Р¤Р°Р№Р»">
-                        <MenuItem text="Р’С–РґРєСЂРёС‚Рё РєРѕР»РµРєС†С–СЋ..." onAction="#handleOpenCollection" />
-                        <MenuItem text="Р†РјРїРѕСЂС‚СѓРІР°С‚Рё РїР°РїРєСѓ FB2/ZIP..." onAction="#handleImportFolder" />
-                        <MenuItem text="Р†РјРїРѕСЂС‚СѓРІР°С‚Рё INPX..." onAction="#handleImportInpx" />
-                        <MenuItem text="Р†РјРїРѕСЂС‚СѓРІР°С‚Рё Р¶Р°РЅСЂРё..." onAction="#handleImportGenres" />
-                        <SeparatorMenuItem />
-                        <MenuItem text="Р’РёС…С–Рґ" onAction="#handleExit" />
-                    </Menu>
-                    <Menu text="РљРЅРёРіР°">
-                        <MenuItem text="Р§РёС‚Р°С‚Рё" onAction="#handleReadBook" />
-                        <MenuItem text="Р РµРґР°РіСѓРІР°С‚Рё" onAction="#handleEditBook" />
-                        <MenuItem text="Р РµРґР°РіСѓРІР°С‚Рё СЂРµС†РµРЅР·С–СЋ" onAction="#handleEditReview" />
-                        <SeparatorMenuItem />
-                        <MenuItem text="Р”РѕРґР°С‚Рё РґРѕ РІРёР±СЂР°РЅРѕРіРѕ" onAction="#handleAddToFavorites" />
-                        <MenuItem text="Р”РѕРґР°С‚Рё РґРѕ РіСЂСѓРїРё" onAction="#handleAddToGroup" />
-                        <MenuItem text="Р’РёРґР°Р»РёС‚Рё Р· РіСЂСѓРїРё" onAction="#handleRemoveFromGroup" />
-                        <SeparatorMenuItem />
-                        <MenuItem text="Р’СЃС‚Р°РЅРѕРІРёС‚Рё РѕС†С–РЅРєСѓ" onAction="#handleSetRate" />
-                        <MenuItem text="Р’СЃС‚Р°РЅРѕРІРёС‚Рё РїСЂРѕРіСЂРµСЃ" onAction="#handleSetProgress" />
-                        <SeparatorMenuItem />
-                        <MenuItem text="Р’РёРґР°Р»РёС‚Рё РєРЅРёРіСѓ" onAction="#handleDeleteBook" />
-                    </Menu>
-                    <Menu text="РџРµСЂРµРіР»СЏРґ">
-                        <MenuItem text="РћРЅРѕРІРёС‚Рё" onAction="#handleRefresh" />
-                        <MenuItem text="РЎС‚Р°С‚РёСЃС‚РёРєР°" onAction="#handleShowStatistics" />
-                        <MenuItem text="РќР°Р»Р°С€С‚СѓРІР°РЅРЅСЏ" onAction="#handleSettings" />
-                    </Menu>
-                    <Menu text="Р”РѕРІС–РґРєР°">
-                        <MenuItem text="РџСЂРѕ РїСЂРѕРіСЂР°РјСѓ" onAction="#handleAbout" />
-                    </Menu>
-                </MenuBar>
-
-                <!-- РџР°РЅРµР»СЊ С–РЅСЃС‚СЂСѓРјРµРЅС‚С–РІ -->
-                <ToolBar>
-                    <Button text="Р’С–РґРєСЂРёС‚Рё" onAction="#handleOpenCollection" />
-                    <Button text="Р†РјРїРѕСЂС‚ FB2" onAction="#handleImportFolder" />
-                    <Button text="Р†РјРїРѕСЂС‚ INPX" onAction="#handleImportInpx" />
-                    <Button text="РћРЅРѕРІРёС‚Рё" onAction="#handleRefresh" />
-                    <Button text="Р§РёС‚Р°С‚Рё" onAction="#handleReadBook" />
-                    <Button text="Р РµРґР°РіСѓРІР°С‚Рё" onAction="#handleEditBook" />
-                    <Separator orientation="VERTICAL" />
-                    <Label text="РџРѕС€СѓРє:" />
-                    <TextField fx:id="searchField" promptText="РџРѕС€СѓРє..." prefWidth="200.0" />
-                </ToolBar>
-
-                <!-- РћСЃРЅРѕРІРЅР° С‡Р°СЃС‚РёРЅР°: Р»С–РІР° РїР°РЅРµР»СЊ + С‚Р°Р±Р»РёС†СЏ + РґРµС‚Р°Р»С– -->
-                <SplitPane dividerPositions="0.25" VBox.vgrow="ALWAYS">
+<BorderPane prefHeight="700.0" prefWidth="1100.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.myhomelibcorp.ui.controller.MainController">
+    <top>
+        <VBox>
+            <MenuBar>
+                <Menu text="Р¤Р°Р№Р»">
+                    <MenuItem text="РќРѕРІР° РєРѕР»РµРєС†С–СЏ..." onAction="#handleNewCollection" />
+                    <MenuItem text="Р’С–РґРєСЂРёС‚Рё РєРѕР»РµРєС†С–СЋ..." onAction="#handleOpenCollection" />
+                    <MenuItem text="Р—Р°СЂРµС”СЃС‚СЂРѕРІР°РЅС– РєРѕР»РµРєС†С–С—..." onAction="#handleShowCollections" />
+                    <SeparatorMenuItem />
+                    <MenuItem text="Р†РјРїРѕСЂС‚СѓРІР°С‚Рё РїР°РїРєСѓ FB2/FBD/ZIP..." onAction="#handleImportFolder" />
+                    <MenuItem text="Р†РјРїРѕСЂС‚СѓРІР°С‚Рё INPX..." onAction="#handleImportInpx" />
+                    <MenuItem text="Р†РјРїРѕСЂС‚СѓРІР°С‚Рё СЃРїРёСЃРѕРє Р¶Р°РЅСЂС–РІ..." onAction="#handleImportGenres" />
+                    <MenuItem text="Р†РјРїРѕСЂС‚СѓРІР°С‚Рё/РµРєСЃРїРѕСЂС‚СѓРІР°С‚Рё РѕС†С–РЅРєРё/СЂРµС†РµРЅР·С–С—..." onAction="#handleImportExportUserData" />
+                    <SeparatorMenuItem />
+                    <MenuItem text="Р•РєСЃРїРѕСЂС‚СѓРІР°С‚Рё РІРёР±СЂР°РЅСѓ РєРЅРёРіСѓ..." onAction="#handleExportBook" />
+                    <MenuItem text="Р•РєСЃРїРѕСЂС‚СѓРІР°С‚Рё РІРёР±СЂР°РЅСѓ РєРЅРёРіСѓ РЅР° РїСЂРёСЃС‚СЂС–Р№..." onAction="#handleExportToDevice" />
+                    <SeparatorMenuItem />
+                    <MenuItem text="РџР°СЂР°РјРµС‚СЂРё..." onAction="#handleSettings" />
+                    <MenuItem text="Р’РёС…С–Рґ" onAction="#handleExit" />
+                </Menu>
+                <Menu text="РљРЅРёРіР°">
+                    <MenuItem text="Р§РёС‚Р°С‚Рё РІСЃРµСЂРµРґРёРЅС–" onAction="#handleReadBook" />
+                    <MenuItem text="Р’С–РґРєСЂРёС‚Рё Р·РѕРІРЅС–С€РЅСЊРѕСЋ РїСЂРѕРіСЂР°РјРѕСЋ" onAction="#handleOpenBookExternal" />
+                    <MenuItem text="Р—Р°РІР°РЅС‚Р°Р¶РёС‚Рё РєРЅРёРіСѓ (РґР»СЏ РѕРЅР»Р°Р№РЅ-РєРѕР»РµРєС†С–Р№)" onAction="#handleDownloadBook" disable="true" />
+                    <SeparatorMenuItem />
+                    <MenuItem text="Р РµРґР°РіСѓРІР°С‚Рё РјРµС‚Р°РґР°РЅС–..." onAction="#handleEditBook" />
+                    <MenuItem text="Р РµРґР°РіСѓРІР°С‚Рё СЂРµС†РµРЅР·С–СЋ..." onAction="#handleEditReview" />
+                    <MenuItem text="Р—РјС–РЅРёС‚Рё РѕР±РєР»Р°РґРёРЅРєСѓ..." onAction="#handleEditCover" disable="true" />
+                    <SeparatorMenuItem />
+                    <MenuItem text="Р”РѕРґР°С‚Рё РґРѕ РІРёР±СЂР°РЅРѕРіРѕ" onAction="#handleAddToFavorites" />
+                    <MenuItem text="Р”РѕРґР°С‚Рё РґРѕ РіСЂСѓРїРё..." onAction="#handleAddToGroup" />
+                    <MenuItem text="Р’РёРґР°Р»РёС‚Рё Р· РіСЂСѓРїРё..." onAction="#handleRemoveFromGroup" />
+                    <SeparatorMenuItem />
+                    <MenuItem text="Р’СЃС‚Р°РЅРѕРІРёС‚Рё РѕС†С–РЅРєСѓ..." onAction="#handleSetRate" />
+                    <MenuItem text="Р’СЃС‚Р°РЅРѕРІРёС‚Рё РїСЂРѕРіСЂРµСЃ..." onAction="#handleSetProgress" />
+                    <SeparatorMenuItem />
+                    <MenuItem text="Р’РёРґР°Р»РёС‚Рё РєРЅРёРіСѓ..." onAction="#handleDeleteBook" />
+                </Menu>
+                <Menu text="РџРµСЂРµРіР»СЏРґ">
+                    <MenuItem text="РџРѕРєР°Р·Р°С‚Рё РґРµСЂРµРІРѕ РЅР°РІС–РіР°С†С–С—" onAction="#handleToggleNavigationTree" />
+                    <MenuItem text="РћРЅРѕРІРёС‚Рё" onAction="#handleRefresh" />
+                    <SeparatorMenuItem />
+                    <MenuItem text="Р РµР¶РёРј РїРµСЂРµРіР»СЏРґСѓ" onAction="#handleViewMode" />
+                    <MenuItem text="РЎРѕСЂС‚СѓРІР°РЅРЅСЏ" onAction="#handleSorting" />
+                    <MenuItem text="Р¤С–Р»СЊС‚СЂРё" onAction="#handleFilters" />
+                    <SeparatorMenuItem />
+                    <MenuItem text="РџРѕС€СѓРє..." onAction="#handleAdvancedSearch" />
+                    <MenuItem text="Р—Р±РµСЂРµР¶РµРЅС– РїРѕС€СѓРєРё..." onAction="#handleSavedSearches" />
+                </Menu>
+                <Menu text="Р“СЂСѓРїРё">
+                    <MenuItem text="РќРѕРІР° РіСЂСѓРїР°..." onAction="#handleNewGroup" />
+                    <MenuItem text="РџРµСЂРµР№РјРµРЅСѓРІР°С‚Рё РіСЂСѓРїСѓ..." onAction="#handleRenameGroup" />
+                    <MenuItem text="Р’РёРґР°Р»РёС‚Рё РіСЂСѓРїСѓ..." onAction="#handleDeleteGroup" />
+                </Menu>
+                <Menu text="Р”РѕРІС–РґРєР°">
+                    <MenuItem text="Р”РѕРІС–РґРєР°" onAction="#handleHelp" />
+                    <MenuItem text="РџСЂРѕ РїСЂРѕРіСЂР°РјСѓ" onAction="#handleAbout" />
+                </Menu>
+            </MenuBar>
+            <ToolBar>
+                <Button text="Р’С–РґРєСЂРёС‚Рё" onAction="#handleOpenCollection" />
+                <Button text="Р†РјРїРѕСЂС‚ FB2" onAction="#handleImportFolder" />
+                <Button text="Р†РјРїРѕСЂС‚ INPX" onAction="#handleImportInpx" />
+                <Button text="РћРЅРѕРІРёС‚Рё" onAction="#handleRefresh" />
+                <Button text="Р§РёС‚Р°С‚Рё" onAction="#handleReadBook" />
+                <Button text="Р РµРґР°РіСѓРІР°С‚Рё" onAction="#handleEditBook" />
+                <Button text="Р’РёР±СЂР°РЅРµ" onAction="#handleAddToFavorites" />
+                <Separator orientation="VERTICAL" />
+                <Label text="РџРѕС€СѓРє:" />
+                <TextField fx:id="searchField" promptText="РџРѕС€СѓРє..." prefWidth="200.0" />
+            </ToolBar>
+        </VBox>
+    </top>
+    <center>
+        <SplitPane dividerPositions="0.25">
+            <items>
+                <TabPane tabClosingPolicy="UNAVAILABLE">
+                    <Tab text="РђРІС‚РѕСЂРё">
+                        <content>
+                            <ListView fx:id="authorsList" />
+                        </content>
+                    </Tab>
+                    <Tab text="РЎРµСЂС–С—">
+                        <content>
+                            <ListView fx:id="seriesList" />
+                        </content>
+                    </Tab>
+                    <Tab text="Р–Р°РЅСЂРё">
+                        <content>
+                            <ListView fx:id="genresList" />
+                        </content>
+                    </Tab>
+                    <Tab text="Р“СЂСѓРїРё">
+                        <content>
+                            <ListView fx:id="groupsList" />
+                        </content>
+                    </Tab>
+                    <Tab text="Р—Р°РІР°РЅС‚Р°Р¶РµРЅРЅСЏ">
+                        <content>
+                            <ListView fx:id="downloadsList" />
+                        </content>
+                    </Tab>
+                </TabPane>
+                <SplitPane orientation="VERTICAL" dividerPositions="0.68">
                     <items>
-                        <!-- Р›С–РІР° РїР°РЅРµР»СЊ -->
-                        <VBox spacing="10" style="-fx-padding: 10;">
-                            <Label style="-fx-font-weight: bold;" text="РђРІС‚РѕСЂРё" />
-                            <ListView fx:id="authorsList" prefHeight="150" />
-                            <Label style="-fx-font-weight: bold;" text="РЎРµСЂС–С—" />
-                            <ListView fx:id="seriesList" prefHeight="150" />
-                            <Label style="-fx-font-weight: bold;" text="Р–Р°РЅСЂРё" />
-                            <ListView fx:id="genresList" prefHeight="150" />
-                            <Label style="-fx-font-weight: bold;" text="Р“СЂСѓРїРё" />
-                            <ListView fx:id="groupsList" prefHeight="150" />
+                        <TableView fx:id="bookTable">
+                            <columns>
+                                <TableColumn fx:id="titleCol" text="РќР°Р·РІР°" prefWidth="220" />
+                                <TableColumn fx:id="authorCol" text="РђРІС‚РѕСЂ" prefWidth="180" />
+                                <TableColumn fx:id="seriesCol" text="РЎРµСЂС–СЏ" prefWidth="120" />
+                                <TableColumn fx:id="seqNumberCol" text="в„–" prefWidth="50" />
+                                <TableColumn fx:id="genreCol" text="Р–Р°РЅСЂ" prefWidth="150" />
+                                <TableColumn fx:id="langCol" text="РњРѕРІР°" prefWidth="50" />
+                                <TableColumn fx:id="rateCol" text="РћС†." prefWidth="50" />
+                                <TableColumn fx:id="progressCol" text="РџСЂРѕРіСЂРµСЃ" prefWidth="70" />
+                                <TableColumn fx:id="fileNameCol" text="Р¤Р°Р№Р»" prefWidth="150" />
+                                <TableColumn fx:id="sizeCol" text="Р РѕР·РјС–СЂ" prefWidth="80" />
+                            </columns>
+                            <contextMenu>
+                                <ContextMenu>
+                                    <items>
+                                        <MenuItem text="Р§РёС‚Р°С‚Рё" onAction="#handleReadBook" />
+                                        <MenuItem text="Р’С–РґРєСЂРёС‚Рё Р·РѕРІРЅС–С€РЅСЊРѕСЋ РїСЂРѕРіСЂР°РјРѕСЋ" onAction="#handleOpenBookExternal" />
+                                        <MenuItem text="Р•РєСЃРїРѕСЂС‚СѓРІР°С‚Рё..." onAction="#handleExportBook" />
+                                        <SeparatorMenuItem />
+                                        <MenuItem text="Р РµРґР°РіСѓРІР°С‚Рё РјРµС‚Р°РґР°РЅС–..." onAction="#handleEditBook" />
+                                        <MenuItem text="Р РµРґР°РіСѓРІР°С‚Рё СЂРµС†РµРЅР·С–СЋ..." onAction="#handleEditReview" />
+                                        <SeparatorMenuItem />
+                                        <MenuItem text="Р”РѕРґР°С‚Рё РґРѕ РІРёР±СЂР°РЅРѕРіРѕ" onAction="#handleAddToFavorites" />
+                                        <MenuItem text="Р”РѕРґР°С‚Рё РґРѕ РіСЂСѓРїРё..." onAction="#handleAddToGroup" />
+                                        <MenuItem text="Р’РёРґР°Р»РёС‚Рё Р· РіСЂСѓРїРё..." onAction="#handleRemoveFromGroup" />
+                                        <SeparatorMenuItem />
+                                        <MenuItem text="Р’СЃС‚Р°РЅРѕРІРёС‚Рё РѕС†С–РЅРєСѓ..." onAction="#handleSetRate" />
+                                        <MenuItem text="Р’СЃС‚Р°РЅРѕРІРёС‚Рё РїСЂРѕРіСЂРµСЃ..." onAction="#handleSetProgress" />
+                                        <SeparatorMenuItem />
+                                        <MenuItem text="Р’РёРґР°Р»РёС‚Рё РєРЅРёРіСѓ..." onAction="#handleDeleteBook" />
+                                    </items>
+                                </ContextMenu>
+                            </contextMenu>
+                        </TableView>
+                        <VBox spacing="8" style="-fx-background-color: #f9f9f9;">
+                            <padding><Insets bottom="10" left="12" right="12" top="10"/></padding>
+                            <Label fx:id="detailTitleLabel" style="-fx-font-weight: bold; -fx-font-size: 14px;" text="РќР°Р·РІР°: -" wrapText="true" />
+                            <Label fx:id="detailAuthorLabel" text="РђРІС‚РѕСЂ: -" wrapText="true" />
+                            <Label fx:id="detailSeriesLabel" text="РЎРµСЂС–СЏ: -" wrapText="true" />
+                            <Label fx:id="detailGenresLabel" text="Р–Р°РЅСЂРё: -" wrapText="true" />
+                            <Label fx:id="detailLanguageLabel" text="РњРѕРІР°: -" />
+                            <Label fx:id="detailFileLabel" text="Р¤Р°Р№Р»: -" />
+                            <Label fx:id="detailSizeLabel" text="Р РѕР·РјС–СЂ: -" />
+                            <Label fx:id="detailRateLabel" text="РћС†С–РЅРєР°: -" />
+                            <Label fx:id="detailProgressLabel" text="РџСЂРѕРіСЂРµСЃ: -%" />
+                            <TextArea fx:id="detailKeywordsArea" promptText="РљР»СЋС‡РѕРІС– СЃР»РѕРІР°" prefHeight="60" wrapText="true" />
+                            <TextArea fx:id="detailAnnotationArea" promptText="РђРЅРѕС‚Р°С†С–СЏ" prefHeight="120" wrapText="true" />
+                            <TextArea fx:id="detailReviewArea" promptText="Р РµС†РµРЅР·С–СЏ" prefHeight="80" wrapText="true" />
                         </VBox>
-
-                        <!-- РџСЂР°РІР° РїР°РЅРµР»СЊ: С‚Р°Р±Р»РёС†СЏ + РґРµС‚Р°Р»С– -->
-                        <SplitPane orientation="VERTICAL" dividerPositions="0.7">
-                            <items>
-                                <TableView fx:id="bookTable">
-                                    <columns>
-                                        <TableColumn fx:id="titleCol" text="РќР°Р·РІР°" prefWidth="220" />
-                                        <TableColumn fx:id="authorCol" text="РђРІС‚РѕСЂ" prefWidth="180" />
-                                        <TableColumn fx:id="seriesCol" text="РЎРµСЂС–СЏ" prefWidth="120" />
-                                        <TableColumn fx:id="seqNumberCol" text="в„–" prefWidth="50" />
-                                        <TableColumn fx:id="genreCol" text="Р–Р°РЅСЂ" prefWidth="150" />
-                                        <TableColumn fx:id="langCol" text="РњРѕРІР°" prefWidth="50" />
-                                        <TableColumn fx:id="rateCol" text="РћС†." prefWidth="50" />
-                                        <TableColumn fx:id="progressCol" text="РџСЂРѕРіСЂРµСЃ" prefWidth="70" />
-                                        <TableColumn fx:id="fileNameCol" text="Р¤Р°Р№Р»" prefWidth="150" />
-                                        <TableColumn fx:id="sizeCol" text="Р РѕР·РјС–СЂ" prefWidth="80" />
-                                    </columns>
-                                    <contextMenu>
-                                        <ContextMenu>
-                                            <MenuItem text="Р§РёС‚Р°С‚Рё" onAction="#handleReadBook" />
-                                            <MenuItem text="Р РµРґР°РіСѓРІР°С‚Рё" onAction="#handleEditBook" />
-                                            <MenuItem text="Р”РѕРґР°С‚Рё РґРѕ РіСЂСѓРїРё" onAction="#handleAddToGroup" />
-                                            <MenuItem text="Р’РёРґР°Р»РёС‚Рё" onAction="#handleDeleteBook" />
-                                        </ContextMenu>
-                                    </contextMenu>
-                                </TableView>
-
-                                <!-- РџР°РЅРµР»СЊ РґРµС‚Р°Р»РµР№ -->
-                                <VBox spacing="8" style="-fx-background-color: #f9f9f9;">
-                                    <padding><Insets bottom="10" left="12" right="12" top="10"/></padding>
-                                    <Label fx:id="detailTitleLabel" style="-fx-font-weight: bold; -fx-font-size: 14px;" text="РќР°Р·РІР°: -" wrapText="true" />
-                                    <Label fx:id="detailAuthorLabel" text="РђРІС‚РѕСЂ: -" wrapText="true" />
-                                    <Label fx:id="detailSeriesLabel" text="РЎРµСЂС–СЏ: -" wrapText="true" />
-                                    <Label fx:id="detailGenresLabel" text="Р–Р°РЅСЂРё: -" wrapText="true" />
-                                    <Label fx:id="detailLanguageLabel" text="РњРѕРІР°: -" />
-                                    <Label fx:id="detailRateLabel" text="РћС†С–РЅРєР°: -" />
-                                    <Label fx:id="detailProgressLabel" text="РџСЂРѕРіСЂРµСЃ: -%" />
-                                    <TextArea fx:id="detailKeywordsArea" promptText="РљР»СЋС‡РѕРІС– СЃР»РѕРІР°" prefHeight="60" wrapText="true" />
-                                    <TextArea fx:id="detailAnnotationArea" promptText="РђРЅРѕС‚Р°С†С–СЏ" prefHeight="120" wrapText="true" />
-                                    <TextArea fx:id="detailReviewArea" promptText="Р РµС†РµРЅР·С–СЏ" prefHeight="80" wrapText="true" />
-                                </VBox>
-                            </items>
-                        </SplitPane>
                     </items>
                 </SplitPane>
-
-                <!-- РќРёР¶РЅСЏ РїР°РЅРµР»СЊ СЃС‚Р°С‚СѓСЃСѓ -->
-                <HBox spacing="10" style="-fx-background-color: #f0f0f0; -fx-border-color: #cccccc; -fx-border-width: 1 0 0 0;">
-                    <padding><Insets bottom="4" left="10" right="10" top="4"/></padding>
-                    <Label fx:id="statusLeftLabel" text="Р“РѕС‚РѕРІРѕ" />
-                    <Pane HBox.hgrow="ALWAYS" />
-                    <Label fx:id="statusRightLabel" text="Р’СЃСЊРѕРіРѕ РєРЅРёРі: 0" />
-                </HBox>
-            </children>
-        </VBox>
-    </children>
-</AnchorPane>
+            </items>
+        </SplitPane>
+    </center>
+    <bottom>
+        <HBox spacing="10" style="-fx-background-color: #f0f0f0; -fx-border-color: #cccccc; -fx-border-width: 1 0 0 0;">
+            <padding><Insets bottom="4" left="10" right="10" top="4"/></padding>
+            <Label fx:id="statusLeftLabel" text="Р“РѕС‚РѕРІРѕ" />
+            <Pane HBox.hgrow="ALWAYS" />
+            <Label fx:id="statusRightLabel" text="Р’СЃСЊРѕРіРѕ РєРЅРёРі: 0" />
+        </HBox>
+    </bottom>
+</BorderPane>
 
 
 ================================================================================

@@ -3,6 +3,7 @@ package com.myhomelibcorp.infrastructure.database;
 import com.myhomelibcorp.domain.model.Book;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.nio.file.Path;
 import java.sql.*;
 import java.util.List;
@@ -21,6 +22,7 @@ public class DatabaseManager {
             stmt.execute("PRAGMA synchronous=OFF;");
             stmt.execute("PRAGMA cache_size=-64000;");
             stmt.execute("PRAGMA foreign_keys=ON;");
+
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS books (
                     id INTEGER PRIMARY KEY, title TEXT NOT NULL, series TEXT,
@@ -30,6 +32,7 @@ public class DatabaseManager {
                     progress INTEGER DEFAULT 0, date_time TEXT, review TEXT
                 );
             """);
+
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS authors (
                     id INTEGER PRIMARY KEY, full_name TEXT NOT NULL,
@@ -37,6 +40,7 @@ public class DatabaseManager {
                     field3 TEXT, field4 TEXT
                 );
             """);
+
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS book_authors (
                     book_id INTEGER, author_id INTEGER,
@@ -45,11 +49,13 @@ public class DatabaseManager {
                     FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE CASCADE
                 );
             """);
+
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS genres (
                     code TEXT PRIMARY KEY, name TEXT NOT NULL
                 );
             """);
+
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS book_genres (
                     book_id INTEGER, genre_code TEXT,
@@ -58,11 +64,13 @@ public class DatabaseManager {
                     FOREIGN KEY (genre_code) REFERENCES genres(code) ON DELETE CASCADE
                 );
             """);
+
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS groups (
                     id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE
                 );
             """);
+
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS book_groups (
                     book_id INTEGER, group_id INTEGER,
@@ -71,42 +79,91 @@ public class DatabaseManager {
                     FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE
                 );
             """);
+
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS settings (
                     key TEXT PRIMARY KEY, value TEXT NOT NULL
                 );
             """);
+
+            // Міграції для додавання нових колонок (безпечні)
             try { stmt.execute("ALTER TABLE books ADD COLUMN review TEXT;"); } catch (SQLException ignored) {}
             try { stmt.execute("ALTER TABLE authors ADD COLUMN field3 TEXT;"); } catch (SQLException ignored) {}
             try { stmt.execute("ALTER TABLE authors ADD COLUMN field4 TEXT;"); } catch (SQLException ignored) {}
             try { stmt.execute("ALTER TABLE authors ADD COLUMN first_name TEXT;"); } catch (SQLException ignored) {}
             try { stmt.execute("ALTER TABLE authors ADD COLUMN middle_name TEXT;"); } catch (SQLException ignored) {}
             try { stmt.execute("ALTER TABLE authors ADD COLUMN last_name TEXT;"); } catch (SQLException ignored) {}
-            try {
-                stmt.execute("ALTER TABLE genres RENAME TO genres_old;");
-                stmt.execute("CREATE TABLE IF NOT EXISTS genres (code TEXT PRIMARY KEY, name TEXT NOT NULL);");
-                stmt.execute("INSERT OR IGNORE INTO genres (code, name) SELECT name, name FROM genres_old;");
-                stmt.execute("DROP TABLE genres_old;");
-            } catch (SQLException ignored) {}
 
-            // FTS5
+            // ==================== FTS5 ====================
             try { stmt.execute("DROP TABLE IF EXISTS books_fts;"); } catch (SQLException ignored) {}
-            stmt.execute("CREATE VIRTUAL TABLE books_fts USING fts5(title, authors, series, keywords, annotation, tokenize='unicode61');");
+            stmt.execute("""
+                CREATE VIRTUAL TABLE books_fts USING fts5(
+                    title, authors, series, keywords, annotation,
+                    tokenize='unicode61'
+                );
+            """);
+
             stmt.execute("""
                 CREATE TRIGGER IF NOT EXISTS books_ai AFTER INSERT ON books BEGIN
                     INSERT INTO books_fts(rowid, title, authors, series, keywords, annotation)
-                    VALUES (new.id, lower(new.title), lower(coalesce((SELECT group_concat(full_name, ' ') FROM authors JOIN book_authors ON authors.id = book_authors.author_id WHERE book_authors.book_id = new.id), '')), lower(new.series), lower(new.keywords), lower(new.annotation));
+                    VALUES (
+                        new.id,
+                        lower(new.title),
+                        lower(coalesce((
+                            SELECT group_concat(full_name, ' ') FROM authors
+                            JOIN book_authors ON authors.id = book_authors.author_id
+                            WHERE book_authors.book_id = new.id
+                        ), '')),
+                        lower(new.series),
+                        lower(new.keywords),
+                        lower(new.annotation)
+                    );
                 END;
             """);
+
             stmt.execute("""
                 CREATE TRIGGER IF NOT EXISTS books_au AFTER UPDATE ON books BEGIN
-                    UPDATE books_fts SET title=lower(new.title), authors=lower(coalesce((SELECT group_concat(full_name, ' ') FROM authors JOIN book_authors ON authors.id = book_authors.author_id WHERE book_authors.book_id = new.id), '')), series=lower(new.series), keywords=lower(new.keywords), annotation=lower(new.annotation) WHERE rowid = old.id;
+                    UPDATE books_fts SET
+                        title = lower(new.title),
+                        authors = lower(coalesce((
+                            SELECT group_concat(full_name, ' ') FROM authors
+                            JOIN book_authors ON authors.id = book_authors.author_id
+                            WHERE book_authors.book_id = new.id
+                        ), '')),
+                        series = lower(new.series),
+                        keywords = lower(new.keywords),
+                        annotation = lower(new.annotation)
+                    WHERE rowid = old.id;
                 END;
             """);
-            stmt.execute("CREATE TRIGGER IF NOT EXISTS books_ad AFTER DELETE ON books BEGIN DELETE FROM books_fts WHERE rowid = old.id; END;");
-            stmt.execute("CREATE TRIGGER IF NOT EXISTS book_authors_ai AFTER INSERT ON book_authors BEGIN UPDATE books_fts SET authors = lower(coalesce((SELECT group_concat(full_name, ' ') FROM authors JOIN book_authors ON authors.id = book_authors.author_id WHERE book_authors.book_id = new.book_id), '')) WHERE rowid = new.book_id; END;");
-            stmt.execute("CREATE TRIGGER IF NOT EXISTS book_authors_ad AFTER DELETE ON book_authors BEGIN UPDATE books_fts SET authors = lower(coalesce((SELECT group_concat(full_name, ' ') FROM authors JOIN book_authors ON authors.id = book_authors.author_id WHERE book_authors.book_id = old.book_id), '')) WHERE rowid = old.book_id; END;");
 
+            stmt.execute("""
+                CREATE TRIGGER IF NOT EXISTS books_ad AFTER DELETE ON books BEGIN
+                    DELETE FROM books_fts WHERE rowid = old.id;
+                END;
+            """);
+
+            stmt.execute("""
+                CREATE TRIGGER IF NOT EXISTS book_authors_ai AFTER INSERT ON book_authors BEGIN
+                    UPDATE books_fts SET authors = lower(coalesce((
+                        SELECT group_concat(full_name, ' ') FROM authors
+                        JOIN book_authors ON authors.id = book_authors.author_id
+                        WHERE book_authors.book_id = new.book_id
+                    ), '')) WHERE rowid = new.book_id;
+                END;
+            """);
+
+            stmt.execute("""
+                CREATE TRIGGER IF NOT EXISTS book_authors_ad AFTER DELETE ON book_authors BEGIN
+                    UPDATE books_fts SET authors = lower(coalesce((
+                        SELECT group_concat(full_name, ' ') FROM authors
+                        JOIN book_authors ON authors.id = book_authors.author_id
+                        WHERE book_authors.book_id = old.book_id
+                    ), '')) WHERE rowid = old.book_id;
+                END;
+            """);
+
+            // Індекси
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_books_title ON books(title);");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_books_series ON books(series);");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_books_language ON books(language);");
@@ -121,13 +178,20 @@ public class DatabaseManager {
 
             seedDefaultGroups(stmt);
             seedDefaultSettings(stmt);
+
             logger.info("Базу даних ініціалізовано: {}", dbUrl);
-        } catch (SQLException e) { logger.error("Помилка ініціалізації БД", e); }
+        } catch (SQLException e) {
+            logger.error("Помилка ініціалізації бази даних", e);
+        }
     }
 
     private void seedDefaultGroups(Statement stmt) {
-        try { stmt.execute("INSERT OR IGNORE INTO groups (name) VALUES ('Favorites');"); stmt.execute("INSERT OR IGNORE INTO groups (name) VALUES ('To read');"); } catch (SQLException ignored) {}
+        try {
+            stmt.execute("INSERT OR IGNORE INTO groups (name) VALUES ('Favorites');");
+            stmt.execute("INSERT OR IGNORE INTO groups (name) VALUES ('To read');");
+        } catch (SQLException ignored) {}
     }
+
     private void seedDefaultSettings(Statement stmt) {
         try {
             stmt.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('view.hideDeleted', 'true');");
@@ -137,15 +201,34 @@ public class DatabaseManager {
             stmt.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('import.readInpx', 'true');");
         } catch (SQLException ignored) {}
     }
-    public void open() throws SQLException { if (activeConnection == null || activeConnection.isClosed()) activeConnection = getConnection(); }
-    public void close() throws SQLException { if (activeConnection != null && !activeConnection.isClosed()) activeConnection.close(); }
-    public Connection getConnection() throws SQLException { return DriverManager.getConnection(dbUrl); }
-    public void saveBooksBatch(List<Book> books) { logger.info("Пакетне збереження {} книг (ще не реалізовано)", books.size()); }
+
+    public void open() throws SQLException {
+        if (activeConnection == null || activeConnection.isClosed()) {
+            activeConnection = getConnection();
+        }
+    }
+
+    public void close() throws SQLException {
+        if (activeConnection != null && !activeConnection.isClosed()) {
+            activeConnection.close();
+        }
+    }
+
+    public Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(dbUrl);
+    }
+
+    public void saveBooksBatch(List<Book> books) {
+        logger.info("Пакетне збереження {} книг (ще не реалізовано)", books.size());
+    }
+
     public int getBookCount() {
         String sql = "SELECT COUNT(*) FROM books;";
         try (Connection conn = getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql); ResultSet rs = pstmt.executeQuery()) {
             if (rs.next()) return rs.getInt(1);
-        } catch (SQLException e) { logger.error("Помилка отримання кількості книг", e); }
+        } catch (SQLException e) {
+            logger.error("Помилка отримання кількості книг", e);
+        }
         return 0;
     }
 }

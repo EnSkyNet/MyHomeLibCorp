@@ -4,7 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b392b232-d61b-4b88-bdfb-daa21a7158dd" name="Changes" comment="Підсумок кроку 0&#10;✅ Що зроблено:&#10;&#10;Створено структуру пакетів відповідно до цільової архітектури.&#10;&#10;Імпортовано всі Java-класи зі старого проекту з перейменуванням пакетів.&#10;&#10;Виправлено BOM-проблему (файли збережено в UTF-8 без BOM).&#10;&#10;Оновлено всі імпорти та назви класів (наприклад, BookRepository → SqliteBookRepository).&#10;&#10;Додано українські коментарі.&#10;&#10;Усунуто конфлікти між AWT та JavaFX (використано повні імена або окремі імпорти).&#10;&#10;Проєкт успішно компілюється." />
+    <list default="true" id="b392b232-d61b-4b88-bdfb-daa21a7158dd" name="Changes" comment="Підсумок кроку 0&#10;✅ Що зроблено:&#10;&#10;Створено структуру пакетів відповідно до цільової архітектури.&#10;&#10;Імпортовано всі Java-класи зі старого проекту з перейменуванням пакетів.&#10;&#10;Виправлено BOM-проблему (файли збережено в UTF-8 без BOM).&#10;&#10;Оновлено всі імпорти та назви класів (наприклад, BookRepository → SqliteBookRepository).&#10;&#10;Додано українські коментарі.&#10;&#10;Усунуто конфлікти між AWT та JavaFX (використано повні імена або окремі імпорти).&#10;&#10;Проєкт успішно компілюється.">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/merged_output.txt" beforeDir="false" afterPath="$PROJECT_DIR$/merged_output.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/infrastructure/database/DatabaseManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/infrastructure/database/DatabaseManager.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -27,12 +31,12 @@
     &quot;assignee&quot;: &quot;EnSkyNet&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings">{
-  &quot;selectedUrlAndAccountId&quot;: {
-    &quot;url&quot;: &quot;https://github.com/EnSkyNet/MyHomeLibCorp.git&quot;,
-    &quot;accountId&quot;: &quot;4bd7c991-364d-4dcc-9adc-c1f573b44c7b&quot;
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/EnSkyNet/MyHomeLibCorp.git",
+    "accountId": "f325b6dc-19ca-44ef-b9aa-0abddf197cca"
   }
-}</component>
+}]]></component>
   <component name="ProblemsViewState">
     <option name="selectedTabId" value="CurrentFile" />
   </component>
@@ -87,7 +91,7 @@
       <workItem from="1781507831164" duration="182000" />
       <workItem from="1781508028972" duration="756000" />
       <workItem from="1781511216062" duration="6838000" />
-      <workItem from="1781518810907" duration="4148000" />
+      <workItem from="1781518810907" duration="5772000" />
     </task>
     <task id="LOCAL-00001" summary="Підсумок кроку 0&#10;✅ Що зроблено:&#10;&#10;Створено структуру пакетів відповідно до цільової архітектури.&#10;&#10;Імпортовано всі Java-класи зі старого проекту з перейменуванням пакетів.&#10;&#10;Виправлено BOM-проблему (файли збережено в UTF-8 без BOM).&#10;&#10;Оновлено всі імпорти та назви класів (наприклад, BookRepository → SqliteBookRepository).&#10;&#10;Додано українські коментарі.&#10;&#10;Усунуто конфлікти між AWT та JavaFX (використано повні імена або окремі імпорти).&#10;&#10;Проєкт успішно компілюється.">
       <option name="closed" value="true" />
@@ -113,7 +117,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781458267630</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Підсумок кроку 0&#10;✅ Що зроблено:&#10;&#10;Створено структуру пакетів відповідно до цільової архітектури.&#10;&#10;Імпортовано всі Java-класи зі старого проекту з перейменуванням пакетів.&#10;&#10;Виправлено BOM-проблему (файли збережено в UTF-8 без BOM).&#10;&#10;Оновлено всі імпорти та назви класів (наприклад, BookRepository → SqliteBookRepository).&#10;&#10;Додано українські коментарі.&#10;&#10;Усунуто конфлікти між AWT та JavaFX (використано повні імена або окремі імпорти).&#10;&#10;Проєкт успішно компілюється.">
+      <option name="closed" value="true" />
+      <created>1781525721873</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1781525721873</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
