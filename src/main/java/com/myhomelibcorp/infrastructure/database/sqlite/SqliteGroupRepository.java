@@ -48,9 +48,7 @@ public class SqliteGroupRepository {
             ps.setString(1, name);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) return rs.getLong("id");
-        } catch (SQLException e) {
-            // ignore, will try insert
-        }
+        } catch (SQLException e) { /* ignore, will try insert */ }
 
         String insert = "INSERT INTO groups (name) VALUES (?)";
         try (Connection conn = dbManager.getConnection();
@@ -122,5 +120,69 @@ public class SqliteGroupRepository {
             throw new RuntimeException(e);
         }
         return groups;
+    }
+
+    /**
+     * Повертає список ID книг, що належать до групи.
+     */
+    public List<Long> getBookIdsInGroup(String groupName) {
+        List<Long> ids = new ArrayList<>();
+        String sql = """
+            SELECT b.id FROM books b
+            JOIN book_groups bg ON b.id = bg.book_id
+            JOIN groups g ON bg.group_id = g.id
+            WHERE g.name = ?
+        """;
+        try (Connection conn = dbManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, groupName);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) ids.add(rs.getLong(1));
+        } catch (SQLException e) {
+            logger.error("Помилка отримання книг у групі {}", groupName, e);
+            throw new RuntimeException(e);
+        }
+        return ids;
+    }
+
+    /**
+     * Перейменовує групу.
+     */
+    public void renameGroup(String oldName, String newName) {
+        String sql = "UPDATE groups SET name = ? WHERE name = ?";
+        try (Connection conn = dbManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, newName);
+            ps.setString(2, oldName);
+            int updated = ps.executeUpdate();
+            if (updated > 0) {
+                logger.debug("Групу '{}' перейменовано на '{}'", oldName, newName);
+            } else {
+                logger.warn("Групу '{}' не знайдено", oldName);
+            }
+        } catch (SQLException e) {
+            logger.error("Помилка перейменування групи", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Видаляє групу. Книги залишаються, зв'язки видаляються каскадно.
+     */
+    public void deleteGroup(String groupName) {
+        String sql = "DELETE FROM groups WHERE name = ?";
+        try (Connection conn = dbManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, groupName);
+            int deleted = ps.executeUpdate();
+            if (deleted > 0) {
+                logger.debug("Групу '{}' видалено", groupName);
+            } else {
+                logger.warn("Групу '{}' не знайдено", groupName);
+            }
+        } catch (SQLException e) {
+            logger.error("Помилка видалення групи", e);
+            throw new RuntimeException(e);
+        }
     }
 }

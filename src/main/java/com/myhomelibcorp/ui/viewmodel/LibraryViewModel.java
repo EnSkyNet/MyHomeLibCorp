@@ -22,11 +22,6 @@ public class LibraryViewModel {
     private final Fb2Importer fb2Importer;
     private final ObservableList<Book> booksList = FXCollections.observableArrayList();
 
-    /**
-     * Конструктор ViewModel.
-     * @param bookRepository репозиторій для роботи з книгами
-     * @param fb2Importer імпортер FB2-файлів (поки не використовується в цьому класі)
-     */
     public LibraryViewModel(SqliteBookRepository bookRepository, Fb2Importer fb2Importer) {
         this.bookRepository = bookRepository;
         this.fb2Importer = fb2Importer;
@@ -56,26 +51,14 @@ public class LibraryViewModel {
         }
     }
 
-    /**
-     * Повертає ObservableList книг для прив'язки до TableView.
-     * @return список книг
-     */
     public ObservableList<Book> getBooksList() {
         return booksList;
     }
 
-    /**
-     * Отримує репозиторій книг (може знадобитися для деяких операцій).
-     * @return екземпляр BookRepository
-     */
     public SqliteBookRepository getBookRepository() {
         return bookRepository;
     }
 
-    /**
-     * Отримує імпортер FB2 (може знадобитися для імпорту).
-     * @return екземпляр Fb2Importer
-     */
     public Fb2Importer getFb2Importer() {
         return fb2Importer;
     }

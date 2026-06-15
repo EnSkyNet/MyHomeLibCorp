@@ -7,6 +7,7 @@ import com.myhomelibcorp.infrastructure.database.sqlite.*;
 import com.myhomelibcorp.infrastructure.importer.Fb2Importer;
 import com.myhomelibcorp.infrastructure.importer.GenreListImporter;
 import com.myhomelibcorp.infrastructure.importer.InpxImporter;
+import com.myhomelibcorp.infrastructure.settings.SettingsStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,34 +21,30 @@ import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-/**
- * Головний сервіс бібліотеки, який об'єднує всі операції:
- * пошук, імпорт, оновлення книг, робота з групами, налаштуваннями, рецензіями тощо.
- */
 public class LibraryService {
-
     private static final Logger logger = LoggerFactory.getLogger(LibraryService.class);
-
     private final DatabaseManager dbManager;
     private final SqliteBookRepository bookRepo;
     private final SqliteAuthorRepository authorRepo;
     private final SqliteGenreRepository genreRepo;
     private final SqliteGroupRepository groupRepo;
-    private final SqliteSettingsRepository settingsRepo;
     private final SqliteReviewRepository reviewRepo;
+    private final SearchRepository searchRepo;
     private final Fb2Importer fb2Importer;
     private final InpxImporter inpxImporter;
     private final GenreListImporter genreListImporter;
     private final BookContentService contentService;
+    private final SettingsStore settingsStore;
 
-    public LibraryService(DatabaseManager dbManager) {
+    public LibraryService(DatabaseManager dbManager, SettingsStore settingsStore) {
         this.dbManager = dbManager;
+        this.settingsStore = settingsStore;
         this.bookRepo = new SqliteBookRepository(dbManager);
         this.authorRepo = new SqliteAuthorRepository(dbManager);
         this.genreRepo = new SqliteGenreRepository(dbManager);
         this.groupRepo = new SqliteGroupRepository(dbManager);
-        this.settingsRepo = new SqliteSettingsRepository(dbManager);
         this.reviewRepo = new SqliteReviewRepository(dbManager);
+        this.searchRepo = new SearchRepository(dbManager);
         this.fb2Importer = new Fb2Importer();
         this.inpxImporter = new InpxImporter();
         this.genreListImporter = new GenreListImporter(dbManager, genreRepo);
@@ -57,18 +54,16 @@ public class LibraryService {
     // ==================== ПОШУК ТА СПИСКИ ====================
 
     /**
-     * Пошук книг за текстовим запитом (назва, серія, ключові слова).
+     * Повнотекстовий пошук книг (FTS5). Регістронезалежний.
      */
     public List<Book> searchBooks(String query) {
         if (query == null || query.isBlank()) {
             return bookRepo.findAll();
         }
-        return bookRepo.findByTitle(query);
+        SearchCriteria criteria = new SearchCriteria(query, "", "", "");
+        return searchRepo.searchBooks(criteria);
     }
 
-    /**
-     * Список всіх авторів (рядки ПІБ).
-     */
     public List<String> listAuthors() {
         return authorRepo.findAll().stream()
                 .map(Author::displayFullName)
@@ -76,14 +71,10 @@ public class LibraryService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Список всіх серій книг.
-     */
     public List<String> listSeries() {
-        String sql = "SELECT DISTINCT series FROM books WHERE series IS NOT NULL AND series != '' ORDER BY series COLLATE NOCASE";
         try (var conn = dbManager.getConnection();
              var stmt = conn.createStatement();
-             var rs = stmt.executeQuery(sql)) {
+             var rs = stmt.executeQuery("SELECT DISTINCT series FROM books WHERE series IS NOT NULL AND series != '' ORDER BY series COLLATE NOCASE")) {
             List<String> list = new ArrayList<>();
             while (rs.next()) list.add(rs.getString(1));
             return list;
@@ -93,112 +84,42 @@ public class LibraryService {
         }
     }
 
-    /**
-     * Список всіх жанрів.
-     */
-    public List<String> listGenres() {
-        return genreRepo.getAllGenreNames();
-    }
-
-    /**
-     * Список всіх груп.
-     */
-    public List<String> listGroups() {
-        return groupRepo.findAllNames();
-    }
+    public List<String> listGenres() { return genreRepo.getAllGenreNames(); }
+    public List<String> listGroups() { return groupRepo.findAllNames(); }
 
     // ==================== ОПЕРАЦІЇ З КНИГАМИ ====================
-
-    /**
-     * Оновлює метадані книги (назва, серія, автори, жанри, оцінка, прогрес тощо).
-     */
     public void updateBook(Book book) {
         bookRepo.update(book);
         bookRepo.saveAuthorsForBook(book.id(), book.authors());
-        List<String> genreCodes = book.genres().stream()
-                .map(this::getGenreCodeByName)
-                .collect(Collectors.toList());
-        bookRepo.saveGenresForBook(book.id(), genreCodes);
-        logger.info("Оновлено книгу: {}", book.title());
+        bookRepo.saveGenresForBook(book.id(), book.genres());
     }
 
-    /**
-     * Допоміжний метод: отримує код жанру за назвою.
-     */
-    private String getGenreCodeByName(String genreName) {
-        Map<String, String> all = genreRepo.getAllGenres();
-        for (Map.Entry<String, String> e : all.entrySet()) {
-            if (e.getValue().equalsIgnoreCase(genreName)) return e.getKey();
-        }
-        return genreName;
-    }
-
-    /**
-     * Встановлює оцінку книзі (від 0 до 5).
-     */
-    public void setRate(long bookId, int rate) {
-        bookRepo.updateRate(bookId, rate);
-        logger.info("Встановлено оцінку {} для книги id={}", rate, bookId);
-    }
-
-    /**
-     * Встановлює прогрес читання (0-100%).
-     */
-    public void setProgress(long bookId, int progress) {
-        bookRepo.updateProgress(bookId, progress);
-        logger.info("Встановлено прогрес {}% для книги id={}", progress, bookId);
-    }
-
-    /**
-     * Отримує рецензію на книгу.
-     */
-    public String getReview(long bookId) {
-        return reviewRepo.getReview(bookId);
-    }
-
-    /**
-     * Зберігає рецензію на книгу.
-     */
-    public void setReview(long bookId, String review) {
-        reviewRepo.setReview(bookId, review);
-        logger.info("Оновлено рецензію для книги id={}", bookId);
-    }
+    public void setRate(long bookId, int rate) { bookRepo.updateRate(bookId, rate); }
+    public void setProgress(long bookId, int progress) { bookRepo.updateProgress(bookId, progress); }
+    public String getReview(long bookId) { return reviewRepo.getReview(bookId); }
+    public void setReview(long bookId, String review) { reviewRepo.setReview(bookId, review); }
 
     // ==================== ГРУПИ ====================
-
-    public void addBookToGroup(long bookId, String groupName) {
-        groupRepo.addBookToGroup(bookId, groupName);
+    public void addBookToGroup(long bookId, String groupName) { groupRepo.addBookToGroup(bookId, groupName); }
+    public void removeBookFromGroup(long bookId, String groupName) { groupRepo.removeBookFromGroup(bookId, groupName); }
+    public List<String> getGroupsForBook(long bookId) { return groupRepo.getGroupsForBook(bookId); }
+    public List<Book> getBooksInGroup(String groupName) {
+        List<Long> ids = groupRepo.getBookIdsInGroup(groupName);
+        List<Book> books = new ArrayList<>();
+        for (long id : ids) bookRepo.findById(id).ifPresent(books::add);
+        return books;
     }
-
-    public void removeBookFromGroup(long bookId, String groupName) {
-        groupRepo.removeBookFromGroup(bookId, groupName);
-    }
-
-    public List<String> getGroupsForBook(long bookId) {
-        return groupRepo.getGroupsForBook(bookId);
-    }
+    public void createGroup(String groupName) { groupRepo.findOrCreateGroup(groupName); }
+    public void renameGroup(String oldName, String newName) { groupRepo.renameGroup(oldName, newName); }
+    public void deleteGroup(String groupName) { groupRepo.deleteGroup(groupName); }
+    public void deleteBook(long bookId) { bookRepo.deleteById(bookId); }
 
     // ==================== НАЛАШТУВАННЯ ====================
-
-    public Map<String, String> getSettings() {
-        return settingsRepo.getAll();
-    }
-
-    public String getSetting(String key, String defaultValue) {
-        return settingsRepo.get(key, defaultValue);
-    }
-
-    public void setSetting(String key, String value) {
-        settingsRepo.set(key, value);
-    }
+    public Map<String, String> getSettings() { return settingsStore.getAll(); }
+    public String getSetting(String key, String defaultValue) { return settingsStore.getString(key, defaultValue); }
+    public void setSetting(String key, String value) { settingsStore.setString(key, value); }
 
     // ==================== ІМПОРТ ПАПКИ ====================
-
-    /**
-     * Імпортує всі FB2 та ZIP-файли з вказаної папки (рекурсивно).
-     * @param folder шлях до папки
-     * @param status функція для оновлення статусу в UI
-     */
     public void importFolder(Path folder, Consumer<String> status) {
         if (!Files.isDirectory(folder)) {
             status.accept("Не є папкою: " + folder);
@@ -242,7 +163,7 @@ public class LibraryService {
 
     private void processZipFile(Path zipFile, Consumer<String> status) {
         try (ZipFile zip = ZipFiles.open(zipFile)) {
-            List<? extends ZipEntry> entries = zip.stream()
+            List<ZipEntry> entries = zip.stream()
                     .filter(entry -> !entry.isDirectory())
                     .filter(entry -> {
                         String name = entry.getName().toLowerCase();
@@ -270,24 +191,14 @@ public class LibraryService {
         }
     }
 
-    /**
-     * Зберігає книгу, отриману з FB2, у базу даних.
-     */
     private void saveBookFromFb2(Fb2Book fb2Book) {
-        String unique = fb2Book.sourcePath().toString() + fb2Book.archiveEntry();
-        long bookId = Math.abs(unique.hashCode());
-
+        long bookId = Math.abs((fb2Book.sourcePath().toString() + fb2Book.archiveEntry()).hashCode());
         List<Author> authorsWithIds = new ArrayList<>();
         for (Author author : fb2Book.authors()) {
-            long authId = author.id();
-            if (authId == 0) {
-                authId = Math.abs(author.displayFullName().hashCode());
-            }
+            long authId = author.id() == 0 ? Math.abs(author.displayFullName().hashCode()) : author.id();
             authorsWithIds.add(new Author(authId, author.firstName(), author.middleName(), author.lastName()));
         }
-
-        String folder;
-        String fileName;
+        String folder, fileName;
         if (fb2Book.archiveEntry().isBlank()) {
             folder = fb2Book.sourcePath().getParent() != null ? fb2Book.sourcePath().getParent().toString() : "";
             fileName = fb2Book.sourcePath().getFileName().toString();
@@ -295,41 +206,23 @@ public class LibraryService {
             folder = fb2Book.sourcePath().toString();
             fileName = fb2Book.archiveEntry();
         }
-
-        Book book = new Book(
-                bookId, fb2Book.title(), authorsWithIds, fb2Book.genres(),
+        Book book = new Book(bookId, fb2Book.title(), authorsWithIds, fb2Book.genres(),
                 fb2Book.series(), fb2Book.sequenceNumber(), fb2Book.language(),
                 fileName, folder, fb2Book.archiveEntry(), fb2Book.fileSize(),
-                fb2Book.keywords(), fb2Book.annotation(),
-                0, 0, LocalDateTime.now()
-        );
-
-        logger.debug("Збереження книги: {} (folder={}, fileName={}, archiveEntry={})",
-                book.title(), book.folder(), book.fileName(), book.archiveEntry());
-
+                fb2Book.keywords(), fb2Book.annotation(), 0, 0, LocalDateTime.now());
         bookRepo.save(book);
-        for (Author author : authorsWithIds) {
-            authorRepo.save(author);
-        }
+        for (Author author : authorsWithIds) authorRepo.save(author);
         bookRepo.saveAuthorsForBook(book.id(), authorsWithIds);
-
-        List<String> genreCodes = fb2Book.genres();
-        for (String code : genreCodes) {
+        for (String code : fb2Book.genres()) {
             if (code != null && !code.isBlank()) {
-                String existingName = genreRepo.getGenreName(code);
-                if (existingName.equals(code)) {
-                    genreRepo.saveGenre(code, code);
-                }
+                String existing = genreRepo.getGenreName(code);
+                if (existing.equals(code)) genreRepo.saveGenre(code, code);
             }
         }
-        bookRepo.saveGenresForBook(book.id(), genreCodes);
+        bookRepo.saveGenresForBook(book.id(), fb2Book.genres());
     }
 
     // ==================== ІМПОРТ INPX ====================
-
-    /**
-     * Імпортує книги з INPX-файлу (архів з індексом).
-     */
     public ImportResult importInpx(Path inpxFile, Consumer<String> status) throws Exception {
         status.accept("Імпорт INPX: " + inpxFile);
         List<Fb2Book> books = inpxImporter.parseInpFolder(Files.newInputStream(inpxFile), inpxFile);
@@ -338,37 +231,27 @@ public class LibraryService {
             saveBookFromFb2(fb);
             saved++;
         }
-        logger.info("Імпортовано {} книг з INPX", saved);
         return new ImportResult(books, saved);
     }
 
     // ==================== ІМПОРТ ЖАНРІВ ====================
-
     public int importGenreList(Path file, String source) throws Exception {
         genreListImporter.importGenresFromFile(file);
+        bookRepo.refreshAllFts();
         return 1;
     }
 
-    // ==================== ЕКСПОРТ ТА ЧИТАННЯ ====================
-
-    /**
-     * Експортує книгу (копіює файл або витягує з архіву) у вказане місце.
-     */
+    // ==================== ЕКСПОРТ ====================
     public void exportBook(Book book, Path destination) throws Exception {
-        Path sourcePath;
-        if (book.hasArchiveEntry()) {
-            sourcePath = Path.of(book.folder());
-        } else {
-            sourcePath = Path.of(book.folder(), book.fileName());
-        }
-        Files.copy(sourcePath, destination, StandardCopyOption.REPLACE_EXISTING);
-        logger.info("Книгу експортовано до {}", destination);
+        Path source = book.hasArchiveEntry() ? Path.of(book.folder()) : Path.of(book.folder(), book.fileName());
+        Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
     }
 
-    /**
-     * Читає книгу та повертає HTML-представлення для відображення у WebView.
-     */
+    // ==================== ЧИТАННЯ ====================
     public String readBookHtml(Book book) throws Exception {
         return contentService.readBookHtml(book);
     }
+
+    // ==================== ДОДАТКОВІ МЕТОДИ ====================
+    public void rebuildFtsIndex() { bookRepo.refreshAllFts(); }
 }

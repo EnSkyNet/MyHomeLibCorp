@@ -4,22 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="b392b232-d61b-4b88-bdfb-daa21a7158dd" name="Changes" comment="Підсумок кроку 0&#10;✅ Що зроблено:&#10;&#10;Створено структуру пакетів відповідно до цільової архітектури.&#10;&#10;Імпортовано всі Java-класи зі старого проекту з перейменуванням пакетів.&#10;&#10;Виправлено BOM-проблему (файли збережено в UTF-8 без BOM).&#10;&#10;Оновлено всі імпорти та назви класів (наприклад, BookRepository → SqliteBookRepository).&#10;&#10;Додано українські коментарі.&#10;&#10;Усунуто конфлікти між AWT та JavaFX (використано повні імена або окремі імпорти).&#10;&#10;Проєкт успішно компілюється.">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/infrastructure/database/DatabaseManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/infrastructure/database/DatabaseManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/infrastructure/database/sqlite/SearchRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/infrastructure/database/sqlite/SearchRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/infrastructure/database/sqlite/SqliteBookRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/infrastructure/database/sqlite/SqliteBookRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/infrastructure/database/sqlite/SqliteGenreRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/infrastructure/database/sqlite/SqliteGenreRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/ui/controller/MainController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/myhomelibcorp/ui/controller/MainController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/com/myhomelibcorp/ui/view/MainView.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/com/myhomelibcorp/ui/view/MainView.fxml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/infrastructure/database/DatabaseManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/infrastructure/database/DatabaseManager.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/infrastructure/database/sqlite/SearchRepository.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/infrastructure/database/sqlite/SearchRepository.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/infrastructure/database/sqlite/SqliteBookRepository.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/infrastructure/database/sqlite/SqliteBookRepository.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/ui/controller/MainController$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/ui/controller/MainController$1.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/ui/controller/MainController$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/ui/controller/MainController$2.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/ui/controller/MainController.class" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/ui/controller/MainController.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/ui/view/MainView.fxml" beforeDir="false" afterPath="$PROJECT_DIR$/target/classes/com/myhomelibcorp/ui/view/MainView.fxml" afterDir="false" />
-    </list>
+    <list default="true" id="b392b232-d61b-4b88-bdfb-daa21a7158dd" name="Changes" comment="Підсумок кроку 0&#10;✅ Що зроблено:&#10;&#10;Створено структуру пакетів відповідно до цільової архітектури.&#10;&#10;Імпортовано всі Java-класи зі старого проекту з перейменуванням пакетів.&#10;&#10;Виправлено BOM-проблему (файли збережено в UTF-8 без BOM).&#10;&#10;Оновлено всі імпорти та назви класів (наприклад, BookRepository → SqliteBookRepository).&#10;&#10;Додано українські коментарі.&#10;&#10;Усунуто конфлікти між AWT та JavaFX (використано повні імена або окремі імпорти).&#10;&#10;Проєкт успішно компілюється." />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -28,8 +13,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="FxmlFile" />
         <option value="Class" />
+        <option value="FxmlFile" />
       </list>
     </option>
   </component>
@@ -48,6 +33,9 @@
     &quot;accountId&quot;: &quot;4bd7c991-364d-4dcc-9adc-c1f573b44c7b&quot;
   }
 }</component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 3,
   &quot;fromUser&quot;: false
@@ -60,25 +48,27 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;onboarding.tips.debug.path&quot;: &quot;D:/JavaLessons/MyHomeLibCorp/src/main/java/org/myhomelib/Main.java&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "SONARLINT_PRECOMMIT_ANALYSIS": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "git-widget-placeholder": "master",
+    "kotlin-language-version-configured": "true",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "onboarding.tips.debug.path": "D:/JavaLessons/MyHomeLibCorp/src/main/java/org/myhomelib/Main.java",
+    "settings.editor.selected.configurable": "org.jetbrains.plugins.github.ui.GithubSettingsConfigurable",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="D:\JavaLessons\MyHomeLibCorp" />
@@ -94,6 +84,10 @@
       <updated>1781443516342</updated>
       <workItem from="1781443517488" duration="4699000" />
       <workItem from="1781449432237" duration="11407000" />
+      <workItem from="1781507831164" duration="182000" />
+      <workItem from="1781508028972" duration="756000" />
+      <workItem from="1781511216062" duration="6838000" />
+      <workItem from="1781518810907" duration="4148000" />
     </task>
     <task id="LOCAL-00001" summary="Підсумок кроку 0&#10;✅ Що зроблено:&#10;&#10;Створено структуру пакетів відповідно до цільової архітектури.&#10;&#10;Імпортовано всі Java-класи зі старого проекту з перейменуванням пакетів.&#10;&#10;Виправлено BOM-проблему (файли збережено в UTF-8 без BOM).&#10;&#10;Оновлено всі імпорти та назви класів (наприклад, BookRepository → SqliteBookRepository).&#10;&#10;Додано українські коментарі.&#10;&#10;Усунуто конфлікти між AWT та JavaFX (використано повні імена або окремі імпорти).&#10;&#10;Проєкт успішно компілюється.">
       <option name="closed" value="true" />

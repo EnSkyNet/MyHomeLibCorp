@@ -3,9 +3,6 @@ package com.myhomelibcorp.domain.model;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 
-/**
- * Інформація про зареєстровану колекцію (базу даних).
- */
 public record CollectionInfo(
         long id,
         String displayName,
@@ -23,7 +20,6 @@ public record CollectionInfo(
     public String rootPathText() {
         return rootFolder == null ? "" : rootFolder.toString();
     }
-
     public String databasePathText() {
         return databasePath == null ? "" : databasePath.toString();
     }

@@ -1,8 +1,5 @@
 package com.myhomelibcorp.domain.model;
 
-/**
- * Record для передачі даних редагування книги (не містить незмінних полів).
- */
 public record BookEdit(
         String title,
         String series,

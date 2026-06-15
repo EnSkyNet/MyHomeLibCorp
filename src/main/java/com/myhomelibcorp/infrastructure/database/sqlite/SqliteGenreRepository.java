@@ -40,20 +40,24 @@ public class SqliteGenreRepository {
      * Повертає назву жанру за кодом. Якщо код не знайдено, повертає сам код.
      */
     public String getGenreName(String code) {
-        String sql = "SELECT name FROM genres WHERE code = ?";
+        if (code == null || code.isBlank()) return "";
+        String sql = "SELECT name FROM genres WHERE code = ? OR name = ?";
         try (Connection conn = dbManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, code);
+            ps.setString(2, code); // якщо код насправді назва
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
-                return rs.getString("name");
+                String name = rs.getString("name");
+                logger.debug("Знайдено жанр: код={} -> назва={}", code, name);
+                return name;
             } else {
                 logger.warn("Код жанру не знайдено: {}", code);
             }
         } catch (SQLException e) {
             logger.error("Помилка отримання назви жанру для коду {}", code, e);
         }
-        return code; // fallback: повертаємо сам код, якщо не знайдено
+        return code;
     }
 
     /**

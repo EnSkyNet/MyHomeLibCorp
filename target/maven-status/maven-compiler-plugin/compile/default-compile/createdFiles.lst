@@ -1,8 +1,10 @@
+com\myhomelibcorp\infrastructure\settings\SettingsStore.class
 com\myhomelibcorp\infrastructure\database\sqlite\SearchRepository.class
 com\myhomelibcorp\ui\controller\MainController$2.class
 com\myhomelibcorp\common\io\ZipFiles.class
 com\myhomelibcorp\domain\model\BookEdit.class
 com\myhomelibcorp\infrastructure\database\sqlite\SqliteSettingsRepository.class
+com\myhomelibcorp\infrastructure\settings\JsonSettingsStore.class
 com\myhomelibcorp\infrastructure\database\BookCollection.class
 com\myhomelibcorp\app\MainApp.class
 com\myhomelibcorp\domain\model\CollectionInfo.class
@@ -11,6 +13,7 @@ com\myhomelibcorp\domain\service\LibraryService.class
 com\myhomelibcorp\infrastructure\importer\Fb2Importer.class
 com\myhomelibcorp\common\exception\ImportException.class
 com\myhomelibcorp\infrastructure\importer\BookImportTask.class
+com\myhomelibcorp\ui\controller\OnlineLibraryController.class
 com\myhomelibcorp\infrastructure\importer\InpxImporter.class
 com\myhomelibcorp\infrastructure\database\sqlite\SqliteReviewRepository.class
 com\myhomelibcorp\domain\model\CollectionType.class
@@ -20,6 +23,7 @@ com\myhomelibcorp\ui\controller\MainController$1.class
 com\myhomelibcorp\domain\model\Author.class
 com\myhomelibcorp\infrastructure\database\sqlite\SqliteStatisticsRepository.class
 com\myhomelibcorp\domain\service\ImportResult.class
+com\myhomelibcorp\ui\controller\OnlineLibraryController$3.class
 com\myhomelibcorp\domain\service\StatisticsService.class
 com\myhomelibcorp\domain\model\Book.class
 com\myhomelibcorp\infrastructure\database\SystemDatabase.class
@@ -30,9 +34,12 @@ com\myhomelibcorp\ui\viewmodel\LibraryViewModel.class
 com\myhomelibcorp\domain\service\BookContentReader.class
 com\myhomelibcorp\domain\service\BookContentService.class
 com\myhomelibcorp\config\AppConfig.class
+com\myhomelibcorp\domain\service\OnlineLibraryService.class
+com\myhomelibcorp\infrastructure\settings\JsonSettingsStore$1.class
 com\myhomelibcorp\domain\service\CollectionManager.class
 com\myhomelibcorp\ui\controller\AdvancedSearchController$SearchParams.class
 com\myhomelibcorp\common\exception\DatabaseException.class
+com\myhomelibcorp\domain\model\OnlineBook.class
 com\myhomelibcorp\ui\controller\AdvancedSearchController.class
 com\myhomelibcorp\common\exception\SearchException.class
 com\myhomelibcorp\config\DatabaseConfig.class
@@ -41,6 +48,7 @@ com\myhomelibcorp\domain\service\SearchService.class
 com\myhomelibcorp\ui\controller\ReaderController.class
 com\myhomelibcorp\infrastructure\database\sqlite\SqliteGenreRepository.class
 com\myhomelibcorp\domain\service\SearchPresetService.class
+com\myhomelibcorp\ui\controller\OnlineLibraryController$2.class
 com\myhomelibcorp\domain\model\Fb2Book.class
 com\myhomelibcorp\infrastructure\database\DatabaseManager.class
 com\myhomelibcorp\domain\model\LibraryStatistics.class
@@ -51,7 +59,9 @@ com\myhomelibcorp\ui\controller\MainController.class
 com\myhomelibcorp\domain\service\InpxParser.class
 com\myhomelibcorp\domain\model\SearchPreset.class
 com\myhomelibcorp\config\SearchConfig.class
+com\myhomelibcorp\ui\controller\OnlineLibraryController$1.class
 com\myhomelibcorp\common\exception\AppException.class
+com\myhomelibcorp\ui\controller\SettingsController.class
 com\myhomelibcorp\domain\model\SearchCriteria.class
 com\myhomelibcorp\domain\service\BookImportWorker.class
 com\myhomelibcorp\infrastructure\database\sqlite\SqliteGroupRepository.class

@@ -27,9 +27,6 @@ public class BookContentService {
 
     private static final Logger logger = LoggerFactory.getLogger(BookContentService.class);
 
-    /**
-     * Читає книгу та повертає HTML-рядок для показу в WebView.
-     */
     public String readBookHtml(Book book) throws Exception {
         byte[] data = readBookBytes(book);
         if (data == null || data.length == 0) {
@@ -57,15 +54,11 @@ public class BookContentService {
         return html.toString();
     }
 
-    /**
-     * Читає сирі байти книги (з файлової системи або з архіву).
-     */
     private byte[] readBookBytes(Book book) throws Exception {
         logger.debug("Читання книги: {}", book.title());
         logger.debug("Папка: {}", book.folder());
         logger.debug("Ім'я файлу: {}", book.fileName());
         logger.debug("Запис в архіві: {}", book.archiveEntry());
-        logger.debug("hasArchiveEntry: {}", book.hasArchiveEntry());
 
         if (book.hasArchiveEntry()) {
             return readFromZip(book);
@@ -75,55 +68,38 @@ public class BookContentService {
     }
 
     private byte[] readFromFileSystem(Book book) throws Exception {
-        // Спроба 1: folder + fileName
         Path filePath = Path.of(book.folder(), book.fileName());
         if (Files.exists(filePath) && Files.isRegularFile(filePath)) {
             logger.debug("Читання з ФС: {}", filePath);
             return Files.readAllBytes(filePath);
         }
-
-        // Спроба 2: fileName як абсолютний або відносний шлях
         filePath = Path.of(book.fileName());
         if (Files.exists(filePath) && Files.isRegularFile(filePath)) {
             logger.debug("Читання з ФС (запасний варіант): {}", filePath);
             return Files.readAllBytes(filePath);
         }
-
         throw new Exception("Файл не знайдено: " + book.folder() + "/" + book.fileName() + " або " + book.fileName());
     }
 
     private byte[] readFromZip(Book book) throws Exception {
         Path zipPath = Path.of(book.folder());
         if (!Files.exists(zipPath) || !Files.isRegularFile(zipPath)) {
-            zipPath = Path.of(book.fileName()); // спроба використати fileName як шлях до архіву
+            zipPath = Path.of(book.fileName());
             if (!Files.exists(zipPath)) {
                 throw new Exception("ZIP-файл не знайдено: " + book.folder() + " або " + book.fileName());
             }
         }
-
-        logger.debug("Шлях до ZIP: {}", zipPath);
-        logger.debug("Пошук запису: {}", book.archiveEntry());
-
         try (ZipFile zip = ZipFiles.open(zipPath)) {
             ZipEntry entry = zip.getEntry(book.archiveEntry());
             if (entry == null) {
-                // шукаємо будь-який .fb2
                 entry = zip.stream()
                         .filter(e -> !e.isDirectory() && e.getName().toLowerCase().endsWith(".fb2"))
                         .findFirst()
                         .orElse(null);
-                if (entry == null) {
-                    throw new Exception("У ZIP не знайдено жодного FB2 запису: " + zipPath);
-                }
-                logger.debug("Використовуємо перший FB2 запис: {}", entry.getName());
-            } else {
-                logger.debug("Знайдено точний запис: {}", entry.getName());
+                if (entry == null) throw new Exception("У ZIP не знайдено жодного FB2 запису: " + zipPath);
             }
-
             try (InputStream is = zip.getInputStream(entry)) {
-                byte[] data = is.readAllBytes();
-                logger.debug("Прочитано {} байт", data.length);
-                return data;
+                return is.readAllBytes();
             }
         }
     }
